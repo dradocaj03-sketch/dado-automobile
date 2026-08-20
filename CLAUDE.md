@@ -15,9 +15,9 @@ Vor dem Planen des Datenmodells der ersten App lesen.
 ## Was das ist
 
 Interne Web-Apps für den Autohandel **Dado Automobile (Inh. David Radocaj)**, betrieben
-und genutzt ausschließlich von David selbst. Erste App: All-in-One-Übersicht für
-Buchhaltung, Analysen, monatliche Zusammenfassung von Einkauf/Verkauf/Gewinn/Margen/
-Ausgaben — Details folgen nach Sichtung von Referenz-Screenshots ("Kakuho"-App).
+und genutzt ausschließlich von David selbst. Erste App heißt **CarCuro** — All-in-One-
+Übersicht für Buchhaltung, Analysen, monatliche Zusammenfassung von Einkauf/Verkauf/
+Gewinn/Margen/Ausgaben. Details folgen nach Sichtung von Referenz-Screenshots ("Kakuho"-App).
 
 ## Kontext / Vertrauensgrenze
 
@@ -58,7 +58,7 @@ dado-automobile/
 ├── firestore.rules
 ├── firestore.indexes.json
 ├── functions/              ← zentrale Rechteverwaltung (admins-Abgleich)
-└── 1-dashboard/             ← erste App (Name folgt nach Konkretisierung)
+└── 1-carcuro/               ← erste App: CarCuro
     ├── index.html
     ├── NOTES.md            ← Version, Live-Adresse, Stand dieser App
     └── netlify/functions/  ← Vorschaltungen für bezahlte Dienste (falls nötig)
@@ -95,8 +95,9 @@ dado-automobile/
       getestet unter /admin/, David als erster Super-Admin bootstrappt
 - [x] Firestore-Regeln (admins/ nur für Admins, alles andere geschlossen)
 - [x] Netlify-Seite verbunden (dado-automobile.netlify.app, Auto-Deploy bei Push auf main)
-- [ ] Erste App (wartet auf Kakuho-Screenshots zur Funktionsklärung — geplanter Umfang:
-      Buchhaltung, Analysen, monatliche Übersicht Einkauf/Verkauf/Gewinn/Margen/Ausgaben)
+- [ ] Erste App **CarCuro** (wartet auf Kakuho-Screenshots zur Funktionsklärung — geplanter
+      Umfang: Buchhaltung, Analysen, monatliche Übersicht Einkauf/Verkauf/Gewinn/Margen/
+      Ausgaben)
 
 ## Offene Punkte / Vorfälle
 
