@@ -73,10 +73,12 @@
   .status-bestand { background: #dbeafe; color: #1e40af; }
   .status-reserviert { background: #fef3c7; color: #92400e; }
   .status-verkauft { background: #dcfce7; color: #166534; }
+  .status-storniert { background: #fee2e2; color: #991b1b; }
   @media (prefers-color-scheme: dark) {
     .status-bestand { background: #1e3a5f; color: #93c5fd; }
     .status-reserviert { background: #4a3a0a; color: #fde68a; }
     .status-verkauft { background: #0f3d24; color: #86efac; }
+    .status-storniert { background: #4a1414; color: #fca5a5; }
   }
   .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
   .kpi { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
@@ -101,14 +103,32 @@
   .hidden { display: none !important; }
   .empty { text-align: center; padding: 40px; color: var(--text-dim); }
   .monthly-table td:first-child { text-transform: capitalize; }
+  .subnav { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .subnav button {
+    background: none; border: none; color: var(--text-dim); opacity: 0.8; padding: 8px 4px;
+    margin-right: 16px; cursor: pointer; font-size: 0.92rem; border-bottom: 2px solid transparent;
+  }
+  .subnav button.sub-active { color: var(--purple); opacity: 1; font-weight: 600; border-bottom-color: var(--purple); }
+  .pos-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+  .pos-table th { font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; text-align: left; padding: 4px 6px; }
+  .pos-table td { padding: 4px 6px; }
+  .pos-table input { width: 100%; }
+  .pos-table .pos-bez { min-width: 140px; }
+  .pos-table .pos-num { width: 80px; }
+  .hint-box { background: var(--bg-page); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 0.82rem; color: var(--text-dim); margin: 6px 0 14px 0; }
+  .summen-box { text-align: right; font-size: 0.92rem; line-height: 1.6; }
+  .summen-box .brutto { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+  .typ-einzahlung { color: var(--green); font-weight: 600; }
+  .typ-auszahlung { color: var(--red); font-weight: 600; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Dado Automobile <span class="badge">v0.1</span></h1>
+  <h1>Dado Automobile <span class="badge">v0.2</span></h1>
   <nav id="mainNav" class="hidden">
     <button data-view="bestand" class="active">Bestand</button>
+    <button data-view="rechnungen">Rechnungen</button>
     <button data-view="auswertungen">Auswertungen</button>
     <button data-view="ausgaben">Ausgaben</button>
   </nav>
@@ -136,6 +156,44 @@
           <tbody id="vehicleTableBody"></tbody>
         </table>
         <div id="vehicleEmpty" class="empty hidden">Noch keine Fahrzeuge erfasst.</div>
+      </div>
+    </section>
+
+    <section id="view-rechnungen" class="hidden">
+      <div class="subnav" id="rechnungenSubnav">
+        <button data-subview="rechnungsliste" class="sub-active">Rechnungen</button>
+        <button data-subview="kassabuch">Kassabuch</button>
+      </div>
+
+      <div id="subview-rechnungsliste">
+        <div class="toolbar">
+          <h2 style="margin:0;">Rechnungen</h2>
+          <button class="primary" id="addRechnungBtn">+ Neue Rechnung</button>
+        </div>
+        <div class="card" style="overflow-x:auto;">
+          <table>
+            <thead><tr>
+              <th>Nr.</th><th>Datum</th><th>Kunde</th><th>Zahlungsart</th><th>Status</th><th>Betrag</th><th></th>
+            </tr></thead>
+            <tbody id="rechnungTableBody"></tbody>
+          </table>
+          <div id="rechnungEmpty" class="empty hidden">Noch keine Rechnungen erfasst.</div>
+        </div>
+      </div>
+
+      <div id="subview-kassabuch" class="hidden">
+        <div class="toolbar">
+          <h2 style="margin:0;">Kassabuch</h2>
+          <button class="primary" id="addKassabuchBtn">+ Ein-/Auszahlung</button>
+        </div>
+        <div class="kpi-grid" id="kassensturzGrid"></div>
+        <div class="card" style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>Datum</th><th>Typ</th><th>Bemerkung</th><th>Betrag</th><th></th></tr></thead>
+            <tbody id="kassabuchTableBody"></tbody>
+          </table>
+          <div id="kassabuchEmpty" class="empty hidden">Noch keine Einträge im Kassabuch.</div>
+        </div>
       </div>
     </section>
 
@@ -229,9 +287,19 @@
     "Verkaufsrechnung",
   ];
 
+  const ZAHLUNGSARTEN = ["Überweisung", "Bar", "Kartenzahlung", "Sonstiges"];
+  const RECHNUNG_STATUS = { offen: "Offen", bezahlt: "Bezahlt", storniert: "Storniert" };
+  // §25a UStG Differenzbesteuerung ist bei David der Regelfall beim Fahrzeugverkauf (siehe
+  // GESCHAEFTSKONTEXT.md) - dabei darf die Umsatzsteuer NICHT gesondert ausgewiesen werden.
+  // Deshalb zwei Rechnungstypen statt eines generischen Netto/Steuer/Brutto-Schemas.
+  const DIFFERENZ_HINWEIS = "Gebrauchtgegenstände/Sonderregelung – Besteuerung nach § 25a UStG (Differenzbesteuerung). Der ausgewiesene Betrag enthält die Umsatzsteuer; sie wird nicht gesondert ausgewiesen.";
+
   let vehicles = [];
   let expenses = [];
+  let rechnungen = [];
+  let kassabuch = [];
   let currentView = "bestand";
+  let currentSubview = "rechnungsliste";
   let currentDocFolder = null;
 
   const statusDot = document.getElementById("statusDot");
@@ -285,6 +353,16 @@
     document.querySelectorAll("main > div#app > section").forEach((s) => s.classList.add("hidden"));
     document.getElementById("view-" + currentView).classList.remove("hidden");
     if (currentView === "auswertungen") renderAuswertungen();
+    if (currentView === "rechnungen") { renderRechnungen(); renderKassabuch(); }
+  });
+
+  document.getElementById("rechnungenSubnav").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-subview]");
+    if (!btn) return;
+    currentSubview = btn.dataset.subview;
+    document.querySelectorAll("#rechnungenSubnav button").forEach((b) => b.classList.toggle("sub-active", b === btn));
+    document.getElementById("subview-rechnungsliste").classList.toggle("hidden", currentSubview !== "rechnungsliste");
+    document.getElementById("subview-kassabuch").classList.toggle("hidden", currentSubview !== "kassabuch");
   });
 
   // ---------- Auth ----------
@@ -298,6 +376,8 @@
 
   let unsubVehicles = null;
   let unsubExpenses = null;
+  let unsubRechnungen = null;
+  let unsubKassabuch = null;
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
@@ -306,6 +386,8 @@
       mainNav.classList.add("hidden");
       if (unsubVehicles) unsubVehicles();
       if (unsubExpenses) unsubExpenses();
+      if (unsubRechnungen) unsubRechnungen();
+      if (unsubKassabuch) unsubKassabuch();
       setStatus(true, "Nicht angemeldet.");
       return;
     }
@@ -338,6 +420,8 @@
 
     if (unsubVehicles) unsubVehicles();
     if (unsubExpenses) unsubExpenses();
+    if (unsubRechnungen) unsubRechnungen();
+    if (unsubKassabuch) unsubKassabuch();
 
     unsubVehicles = onSnapshot(collection(db, "fahrzeuge"), (snap) => {
       vehicles = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -351,6 +435,18 @@
       expenses.sort((a, b) => (b.datum || "").localeCompare(a.datum || ""));
       renderAusgaben();
     }, (err) => setStatus(false, "Fehler beim Laden der Ausgaben: " + err.message));
+
+    unsubRechnungen = onSnapshot(collection(db, "rechnungen"), (snap) => {
+      rechnungen = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      rechnungen.sort((a, b) => (b.nummer || "").localeCompare(a.nummer || ""));
+      if (currentView === "rechnungen") renderRechnungen();
+    }, (err) => setStatus(false, "Fehler beim Laden der Rechnungen: " + err.message));
+
+    unsubKassabuch = onSnapshot(collection(db, "kassabuch"), (snap) => {
+      kassabuch = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      kassabuch.sort((a, b) => (b.datum || "").localeCompare(a.datum || ""));
+      if (currentView === "rechnungen") renderKassabuch();
+    }, (err) => setStatus(false, "Fehler beim Laden des Kassabuchs: " + err.message));
   });
 
   // ---------- Bestand ----------
@@ -845,6 +941,387 @@
         data.createdAt = serverTimestamp();
         data.createdBy = auth.currentUser.email;
         await setDoc(doc(collection(db, "ausgaben")), data, { merge: true });
+      }
+      closeModal();
+    });
+  }
+
+  // ---------- Rechnungen & Kassabuch ----------
+  async function nextRechnungsNr() {
+    const counterRef = doc(db, "meta", "invoiceCounter");
+    const next = await runTransaction(db, async (tx) => {
+      const snap = await tx.get(counterRef);
+      const n = snap.exists() ? (snap.data().next || 1) : 1;
+      tx.set(counterRef, { next: n + 1 }, { merge: true });
+      return n;
+    });
+    const jahr = new Date().getFullYear();
+    return `RE-${jahr}-${String(next).padStart(4, "0")}`;
+  }
+
+  function calcPositionSum(p) {
+    return (Number(p.menge) || 0) * (Number(p.einzelpreis) || 0);
+  }
+
+  // Zwei Rechnungstypen statt eines generischen Netto/Steuer/Brutto-Schemas: bei
+  // Differenzbesteuerung (§25a UStG, Davids Regelfall beim Fahrzeugverkauf, siehe
+  // GESCHAEFTSKONTEXT.md) darf die Umsatzsteuer NICHT gesondert ausgewiesen werden.
+  function calcRechnungSummen(typ, positionen) {
+    if (typ === "differenz") {
+      const brutto = positionen.reduce((s, p) => s + calcPositionSum(p), 0);
+      return { typ, netto: null, steuer: null, brutto, steuerDetails: [] };
+    }
+    let netto = 0;
+    const bySatz = {};
+    positionen.forEach((p) => {
+      const sum = calcPositionSum(p);
+      const satz = Number(p.steuersatz) || 0;
+      netto += sum;
+      bySatz[satz] = (bySatz[satz] || 0) + sum;
+    });
+    const steuerDetails = Object.keys(bySatz).map((satz) => ({
+      satz: Number(satz), netto: bySatz[satz], steuer: (bySatz[satz] * Number(satz)) / 100,
+    }));
+    const steuer = steuerDetails.reduce((s, d) => s + d.steuer, 0);
+    return { typ, netto, steuer, brutto: netto + steuer, steuerDetails };
+  }
+
+  function renderRechnungen() {
+    const tbody = document.getElementById("rechnungTableBody");
+    const empty = document.getElementById("rechnungEmpty");
+    tbody.innerHTML = "";
+    empty.classList.toggle("hidden", rechnungen.length > 0);
+
+    const statusClass = { offen: "bestand", bezahlt: "verkauft", storniert: "storniert" };
+    rechnungen.forEach((r) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${r.nummer || "-"}</td>
+        <td>${fmtDate(r.datum)}</td>
+        <td>${r.kunde || "Kein Kunde"}</td>
+        <td>${r.zahlungsart || "-"}</td>
+        <td><span class="status-pill status-${statusClass[r.status] || "bestand"}">${RECHNUNG_STATUS[r.status] || r.status}</span></td>
+        <td>${fmtEuro(r.brutto)}</td>
+        <td><button class="secondary" data-edit-rechnung="${r.id}">Verwalten</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll("[data-edit-rechnung]").forEach((btn) => {
+      btn.addEventListener("click", () => openRechnungModal(rechnungen.find((r) => r.id === btn.dataset.editRechnung)));
+    });
+  }
+
+  document.getElementById("addRechnungBtn").addEventListener("click", () => openRechnungModal(null));
+
+  function openRechnungModal(rechnung) {
+    const isEdit = !!rechnung;
+    const r = rechnung || {
+      datum: new Date().toISOString().slice(0, 10),
+      zahlungsart: ZAHLUNGSARTEN[0],
+      status: "offen",
+      typ: "differenz",
+      kunde: "",
+      fahrzeugId: null,
+      textVor: "",
+      textNach: DIFFERENZ_HINWEIS,
+    };
+    let typ = r.typ || "differenz";
+    let positionen = r.positionen ? r.positionen.map((p) => ({ ...p })) : [];
+    if (!isEdit && positionen.length === 0) positionen.push({ bezeichnung: "", menge: 1, einzelpreis: "", steuersatz: 19 });
+
+    function renderPositionen() {
+      const container = document.getElementById("positionenContainer");
+      if (!container) return;
+      const showSteuer = typ === "regel";
+      container.innerHTML = `
+        <table class="pos-table">
+          <thead><tr>
+            <th>Bezeichnung</th><th>Menge</th><th>Einzelpreis (€)</th>${showSteuer ? "<th>Steuersatz %</th>" : ""}<th>Gesamt</th><th></th>
+          </tr></thead>
+          <tbody>
+            ${positionen.map((p, i) => `
+              <tr>
+                <td class="pos-bez"><input data-pos="${i}" data-field="bezeichnung" value="${(p.bezeichnung || "").replace(/"/g, "&quot;")}" /></td>
+                <td class="pos-num"><input data-pos="${i}" data-field="menge" type="number" step="1" value="${p.menge ?? 1}" /></td>
+                <td class="pos-num"><input data-pos="${i}" data-field="einzelpreis" type="number" step="0.01" value="${p.einzelpreis ?? ""}" /></td>
+                ${showSteuer ? `<td class="pos-num"><input data-pos="${i}" data-field="steuersatz" type="number" step="1" value="${p.steuersatz ?? 19}" /></td>` : ""}
+                <td style="text-align:right;white-space:nowrap;">${fmtEuro(calcPositionSum(p))}</td>
+                <td><button type="button" class="danger" style="padding:2px 8px;" data-remove-pos="${i}">×</button></td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+        <button type="button" class="secondary" id="addPosBtn">+ Position</button>
+      `;
+
+      container.querySelectorAll("input[data-pos]").forEach((input) => {
+        input.addEventListener("input", () => {
+          const idx = Number(input.dataset.pos);
+          const field = input.dataset.field;
+          positionen[idx][field] = field === "bezeichnung" ? input.value : (input.value === "" ? "" : Number(input.value));
+          renderSummen();
+          // Nur die Gesamt-Zelle der Zeile aktualisieren (nicht die ganze Tabelle neu
+          // rendern), sonst verliert das gerade getippte Feld beim Tippen den Fokus.
+          const row = input.closest("tr");
+          const sumCell = row.children[showSteuer ? 4 : 3];
+          sumCell.textContent = fmtEuro(calcPositionSum(positionen[idx]));
+        });
+      });
+      container.querySelectorAll("[data-remove-pos]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          positionen.splice(Number(btn.dataset.removePos), 1);
+          renderPositionen();
+          renderSummen();
+        });
+      });
+      document.getElementById("addPosBtn").addEventListener("click", () => {
+        positionen.push({ bezeichnung: "", menge: 1, einzelpreis: "", steuersatz: 19 });
+        renderPositionen();
+        renderSummen();
+      });
+    }
+
+    function renderSummen() {
+      const el = document.getElementById("summenBox");
+      if (!el) return;
+      const s = calcRechnungSummen(typ, positionen);
+      if (typ === "differenz") {
+        el.innerHTML = `<div class="brutto">Gesamt: ${fmtEuro(s.brutto)}</div>`;
+      } else {
+        el.innerHTML = `
+          ${s.steuerDetails.map((d) => `<div>Netto (${d.satz}%): ${fmtEuro(d.netto)} · Steuer: ${fmtEuro(d.steuer)}</div>`).join("")}
+          <div>Netto gesamt: ${fmtEuro(s.netto)}</div>
+          <div>Steuer gesamt: ${fmtEuro(s.steuer)}</div>
+          <div class="brutto">Brutto: ${fmtEuro(s.brutto)}</div>
+        `;
+      }
+    }
+
+    const fahrzeugOptions = vehicles.map((v) => `<option value="${v.id}" ${r.fahrzeugId === v.id ? "selected" : ""}>${v.nr ? "#" + v.nr + " " : ""}${v.marke || ""} ${v.modell || ""}</option>`).join("");
+
+    modalRoot.innerHTML = `
+      <div class="modal-overlay">
+        <div class="modal" style="max-width:680px;">
+          <h2>${isEdit ? "Rechnung " + (r.nummer || "") : "Neue Rechnung"}</h2>
+          <form id="rechnungForm">
+            <div class="form-grid">
+              <div class="field full"><label>Kunde</label><input name="kunde" value="${(r.kunde || "").replace(/"/g, "&quot;")}" placeholder="Name/Adresse, leer = Kein Kunde" /></div>
+              <div class="field"><label>Fahrzeug (optional)</label>
+                <select name="fahrzeugId" id="fahrzeugSelect"><option value="">— kein Fahrzeug —</option>${fahrzeugOptions}</select>
+              </div>
+              <div class="field"><label>Datum</label><input name="datum" type="date" value="${r.datum || ""}" required /></div>
+              <div class="field"><label>Zahlungsart</label>
+                <select name="zahlungsart">${ZAHLUNGSARTEN.map((z) => `<option ${r.zahlungsart === z ? "selected" : ""}>${z}</option>`).join("")}</select>
+              </div>
+              <div class="field"><label>Status</label>
+                <select name="status">${Object.entries(RECHNUNG_STATUS).map(([k, l]) => `<option value="${k}" ${r.status === k ? "selected" : ""}>${l}</option>`).join("")}</select>
+              </div>
+              <div class="field full"><label>Rechnungstyp</label>
+                <select name="typ" id="typSelect">
+                  <option value="differenz" ${typ === "differenz" ? "selected" : ""}>Differenzbesteuerung (§25a UStG) — Standard bei Fahrzeugverkauf</option>
+                  <option value="regel" ${typ === "regel" ? "selected" : ""}>Regelbesteuerung — mit gesondert ausgewiesener USt.</option>
+                </select>
+              </div>
+              <div class="field full">
+                <label>Positionen</label>
+                <div id="positionenContainer"></div>
+              </div>
+              <div class="field full"><label>Text vor den Positionen (optional)</label><textarea name="textVor" rows="2">${r.textVor || ""}</textarea></div>
+              <div class="field full"><label>Text nach den Positionen (optional)</label><textarea name="textNach" rows="2">${(r.textNach ?? (typ === "differenz" ? DIFFERENZ_HINWEIS : "")).toString()}</textarea></div>
+              <div class="field full"><div id="summenBox" class="summen-box"></div></div>
+            </div>
+            <div class="hint-box">Kein DATEV-Export, keine E-Rechnung/XRechnung, keine automatische PDF-Erstellung in dieser Version — Rechnung hier erfassen, PDF weiterhin extern erstellen. Steuerliche Einordnung bitte bei Bedarf mit dem Steuerberater abgleichen.</div>
+            <div class="modal-actions">
+              ${isEdit ? '<button type="button" class="danger" id="deleteRechnungBtn">Löschen</button>' : ""}
+              <button type="button" class="secondary" id="cancelRechnungBtn">Abbrechen</button>
+              <button type="submit" class="primary">Speichern</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    renderPositionen();
+    renderSummen();
+
+    document.getElementById("cancelRechnungBtn").addEventListener("click", closeModal);
+
+    document.getElementById("typSelect").addEventListener("change", (e) => {
+      typ = e.target.value;
+      const textNachEl = document.querySelector('textarea[name="textNach"]');
+      // Hinweistext nur automatisch setzen/entfernen, wenn er noch der Standardtext ist
+      // oder leer (sonst überschreiben wir eine vom Nutzer selbst geschriebene Formulierung).
+      if (typ === "differenz" && !textNachEl.value.trim()) textNachEl.value = DIFFERENZ_HINWEIS;
+      if (typ === "regel" && textNachEl.value.trim() === DIFFERENZ_HINWEIS) textNachEl.value = "";
+      renderPositionen();
+      renderSummen();
+    });
+
+    document.getElementById("fahrzeugSelect").addEventListener("change", (e) => {
+      const v = vehicles.find((x) => x.id === e.target.value);
+      if (!v) return;
+      const preis = v.status === "verkauft" ? v.verkaufspreis : v.angebotspreis;
+      const leer = positionen.length === 1 && !positionen[0].bezeichnung && !positionen[0].einzelpreis;
+      const bezeichnung = `${v.marke || ""} ${v.modell || ""}${v.fin ? " · FIN " + v.fin : ""}`.trim();
+      if (leer) {
+        positionen[0] = { bezeichnung, menge: 1, einzelpreis: preis || "", steuersatz: 19 };
+      } else {
+        positionen.push({ bezeichnung, menge: 1, einzelpreis: preis || "", steuersatz: 19 });
+      }
+      renderPositionen();
+      renderSummen();
+    });
+
+    if (isEdit) {
+      document.getElementById("deleteRechnungBtn").addEventListener("click", async () => {
+        if (confirm(`Rechnung ${r.nummer || ""} wirklich löschen?`)) {
+          await deleteDoc(doc(db, "rechnungen", r.id));
+          closeModal();
+        }
+      });
+    }
+
+    document.getElementById("rechnungForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const cleanPositionen = positionen
+        .filter((p) => (p.bezeichnung || "").toString().trim() || Number(p.einzelpreis))
+        .map((p) => ({
+          bezeichnung: (p.bezeichnung || "").toString().trim(),
+          menge: Number(p.menge) || 0,
+          einzelpreis: Number(p.einzelpreis) || 0,
+          steuersatz: typ === "regel" ? (Number(p.steuersatz) || 0) : null,
+        }));
+      const summen = calcRechnungSummen(typ, cleanPositionen);
+      const fahrzeugId = fd.get("fahrzeugId") || null;
+      const fahrzeug = fahrzeugId ? vehicles.find((v) => v.id === fahrzeugId) : null;
+
+      const data = {
+        kunde: fd.get("kunde").trim(),
+        fahrzeugId,
+        fahrzeugLabel: fahrzeug ? `${fahrzeug.marke || ""} ${fahrzeug.modell || ""}`.trim() : null,
+        datum: fd.get("datum"),
+        zahlungsart: fd.get("zahlungsart"),
+        status: fd.get("status"),
+        typ,
+        positionen: cleanPositionen,
+        textVor: fd.get("textVor").trim(),
+        textNach: fd.get("textNach").trim(),
+        netto: summen.netto,
+        steuer: summen.steuer,
+        brutto: summen.brutto,
+        updatedAt: serverTimestamp(),
+        updatedBy: auth.currentUser.email,
+      };
+
+      if (isEdit) {
+        await setDoc(doc(db, "rechnungen", r.id), data, { merge: true });
+      } else {
+        data.nummer = await nextRechnungsNr();
+        data.createdAt = serverTimestamp();
+        data.createdBy = auth.currentUser.email;
+        await setDoc(doc(collection(db, "rechnungen")), data, { merge: true });
+      }
+      closeModal();
+    });
+  }
+
+  // ---------- Kassabuch ----------
+  function renderKassabuch() {
+    const tbody = document.getElementById("kassabuchTableBody");
+    const empty = document.getElementById("kassabuchEmpty");
+    tbody.innerHTML = "";
+    empty.classList.toggle("hidden", kassabuch.length > 0);
+
+    // Chronologisch (älteste zuerst) für den laufenden Kassenstand aufsummieren.
+    const chron = [...kassabuch].sort((a, b) => (a.datum || "").localeCompare(b.datum || ""));
+    let laufend = 0, einnahmen = 0, ausgabenSumme = 0;
+    chron.forEach((k) => {
+      const betrag = k.betrag || 0;
+      laufend += k.typ === "einzahlung" ? betrag : -betrag;
+      if (k.typ === "einzahlung") einnahmen += betrag; else ausgabenSumme += betrag;
+    });
+
+    kassabuch.forEach((k) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${fmtDate(k.datum)}</td>
+        <td class="typ-${k.typ}">${k.typ === "einzahlung" ? "Einzahlung" : "Auszahlung"}</td>
+        <td>${k.bemerkung || ""}</td>
+        <td class="${k.typ === "einzahlung" ? "profit-pos" : "profit-neg"}">${k.typ === "auszahlung" ? "− " : ""}${fmtEuro(k.betrag)}</td>
+        <td><button class="secondary" data-edit-kb="${k.id}">Verwalten</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll("[data-edit-kb]").forEach((btn) => {
+      btn.addEventListener("click", () => openKassabuchModal(kassabuch.find((k) => k.id === btn.dataset.editKb)));
+    });
+
+    document.getElementById("kassensturzGrid").innerHTML = [
+      { label: "Einnahmen gesamt", value: fmtEuro(einnahmen) },
+      { label: "Auszahlungen gesamt", value: fmtEuro(ausgabenSumme) },
+      { label: "Aktueller Kassenstand", value: fmtEuro(laufend) },
+    ].map((k) => `<div class="kpi"><div class="value">${k.value}</div><div class="label">${k.label}</div></div>`).join("");
+  }
+
+  document.getElementById("addKassabuchBtn").addEventListener("click", () => openKassabuchModal(null));
+
+  function openKassabuchModal(eintrag) {
+    const isEdit = !!eintrag;
+    const k = eintrag || { datum: new Date().toISOString().slice(0, 10), typ: "einzahlung" };
+    modalRoot.innerHTML = `
+      <div class="modal-overlay">
+        <div class="modal">
+          <h2>${isEdit ? "Kassabuch-Eintrag bearbeiten" : "Ein-/Auszahlung"}</h2>
+          <form id="kassabuchForm">
+            <div class="form-grid">
+              <div class="field"><label>Datum</label><input name="datum" type="date" value="${k.datum || ""}" required /></div>
+              <div class="field"><label>Typ</label>
+                <select name="typ">
+                  <option value="einzahlung" ${k.typ === "einzahlung" ? "selected" : ""}>Einzahlung</option>
+                  <option value="auszahlung" ${k.typ === "auszahlung" ? "selected" : ""}>Auszahlung</option>
+                </select>
+              </div>
+              <div class="field full"><label>Betrag (€)</label><input name="betrag" type="number" step="0.01" min="0" value="${k.betrag ?? ""}" required /></div>
+              <div class="field full"><label>Bemerkung</label><input name="bemerkung" value="${(k.bemerkung || "").replace(/"/g, "&quot;")}" /></div>
+            </div>
+            <div class="modal-actions">
+              ${isEdit ? '<button type="button" class="danger" id="deleteKassabuchBtn">Löschen</button>' : ""}
+              <button type="button" class="secondary" id="cancelKassabuchBtn">Abbrechen</button>
+              <button type="submit" class="primary">Speichern</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    document.getElementById("cancelKassabuchBtn").addEventListener("click", closeModal);
+    if (isEdit) {
+      document.getElementById("deleteKassabuchBtn").addEventListener("click", async () => {
+        if (confirm("Diesen Kassabuch-Eintrag wirklich löschen?")) {
+          await deleteDoc(doc(db, "kassabuch", k.id));
+          closeModal();
+        }
+      });
+    }
+    document.getElementById("kassabuchForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const data = {
+        datum: fd.get("datum"),
+        typ: fd.get("typ"),
+        betrag: Math.abs(Number(fd.get("betrag")) || 0),
+        bemerkung: fd.get("bemerkung").trim(),
+        updatedAt: serverTimestamp(),
+        updatedBy: auth.currentUser.email,
+      };
+      if (isEdit) {
+        await setDoc(doc(db, "kassabuch", k.id), data, { merge: true });
+      } else {
+        data.createdAt = serverTimestamp();
+        data.createdBy = auth.currentUser.email;
+        await setDoc(doc(collection(db, "kassabuch")), data, { merge: true });
       }
       closeModal();
     });

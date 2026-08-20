@@ -49,7 +49,7 @@ Erkenntnisse aus den CarCuro-Screenshots liegen in `CARCURO_REFERENZ.md`.
 | Rechte | Custom Claims im Token (`admin`, `apps`), gesteuert über `admins/{email}`-Sammlung |
 | Server-Logik | Firebase Cloud Functions (Rechte-Abgleich, ggf. Zeitpläne) |
 | Bild-Upload | Firebase Storage (`fahrzeuge/{id}/foto.<ext>`) |
-| Bezahlte APIs | Nur über eigene Netlify-Functions (`netlify/functions/`), nie Schlüssel im Browser. Aktuell: `extract-invoice.js` (Anthropic API, PDF-Rechnungserkennung) — prüft Firebase-Auth-Token, begrenzt auf 20 Aufrufe/Stunde/Nutzer, feste Modellwahl (`claude-sonnet-5`), 8 MB Größenlimit |
+| Bezahlte APIs | Nur über eigene Netlify-Functions (`netlify/functions/`), nie Schlüssel im Browser. Aktuell: `extract-invoice.js` (Anthropic API, PDF-Rechnungserkennung) — prüft Firebase-Auth-Token, begrenzt auf 10 Aufrufe/Stunde/Nutzer, feste Modellwahl (`claude-haiku-4-5`), 5 MB Größenlimit. Geplant: mobile.de Seller-API, siehe `MOBILE_DE_ANBINDUNG.md` |
 
 Firebase-Projekt-ID: `dado-automobile-ca04c`
 GitHub-Repo: `dado-automobile` (Account: dradocaj03-sketch) — **aktuell öffentlich
@@ -96,7 +96,7 @@ dado-automobile/
     Änderung der bestehenden Datei, Regeln lockern um ein Problem zu umgehen, Funktionieren
     behaupten ohne Ausführung.
 
-## Aktueller Stand (2026-08-20)
+## Aktueller Stand (2026-08-20, Nachtrag: Rechnungen/Kassabuch)
 
 - [x] Repo initialisiert
 - [x] GitHub-Repo verbunden (aktuell öffentlich, siehe Vorfälle)
@@ -109,7 +109,11 @@ dado-automobile/
       `CARCURO_REFERENZ.md` und `GESCHAEFTSKONTEXT.md`
 - [x] Erste App **„Dado Automobile"** v0.1 live: Fahrzeugbestand (mit Bild, VIN, editierbaren
       Standtagen), Auswertungen, Ausgaben, PDF-Rechnungserkennung (Anthropic API)
-- [ ] Weitere Ausbaustufen nach Bedarf (Rechnungen/Kassabuch, Verträge, Website-Baukasten
+- [x] v0.2: Reiter Rechnungen (mit Rechnungstyp Differenzbesteuerung/Regelbesteuerung,
+      siehe `1-dado-automobile/NOTES.md`) + Kassabuch
+- [ ] mobile.de-Seller-API-Anbindung — Plan in `MOBILE_DE_ANBINDUNG.md`, blockiert auf
+      API-Zugangsdaten und Endpunkt-Doku von David
+- [ ] Weitere Ausbaustufen nach Bedarf (Verträge, Website-Baukasten, Kundenverwaltung
       — siehe `CARCURO_REFERENZ.md`)
 
 ## Offene Punkte / Vorfälle

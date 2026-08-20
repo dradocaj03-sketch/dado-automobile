@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-08-20 (Fortsetzung 3)
+- App v0.2: Reiter „Rechnungen" (mit Unterreitern Rechnungen/Kassabuch) hinzugefügt,
+  Grundgerüst nach `CARCURO_REFERENZ.md`
+- Rechnungen: dynamische Positionen, automatische Rechnungsnummer (`meta/invoiceCounter`),
+  optionale Verknüpfung mit Bestandsfahrzeug. Bewusst **kein** 1:1-Nachbau von CarCuros
+  Netto/Steuer/Brutto-Schema — stattdessen zwei Rechnungstypen (Differenzbesteuerung nach
+  §25a UStG als Standard ohne gesonderten USt.-Ausweis, sowie Regelbesteuerung), weil laut
+  `GESCHAEFTSKONTEXT.md` Differenzbesteuerung bei Davids Fahrzeugverkäufen der Regelfall ist
+  und ein gesonderter USt.-Ausweis dabei rechtlich falsch wäre
+- Kassabuch: Ein-/Auszahlungen, laufender Kassenstand als Kennzahlen-Kacheln
+- Firestore-Regeln um `rechnungen`, `kassabuch`, `meta/invoiceCounter` erweitert
+- `MOBILE_DE_ANBINDUNG.md` angelegt: Plan für eine spätere mobile.de-Seller-API-Anbindung
+  (Fahrzeuge direkt aus der App auf mobile.de veröffentlichen). Noch nicht umgesetzt —
+  fehlende API-Zugangsdaten und konkrete Endpunkt-Dokumentation blockieren die Umsetzung
+
 ## 2026-08-20 (Fortsetzung 2)
 - PDF-Rechnungserkennung erfolgreich live getestet
 - Vorfall: Service-Account-Schlüssel einmal versehentlich per CLI-Ausgabe offengelegt,

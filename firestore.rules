@@ -27,6 +27,15 @@ service cloud.firestore {
     match /meta/vehicleCounter {
       allow read, write: if isAdmin() || hasApp('dado-automobile');
     }
+    match /rechnungen/{doc} {
+      allow read, write: if isAdmin() || hasApp('dado-automobile');
+    }
+    match /kassabuch/{doc} {
+      allow read, write: if isAdmin() || hasApp('dado-automobile');
+    }
+    match /meta/invoiceCounter {
+      allow read, write: if isAdmin() || hasApp('dado-automobile');
+    }
 
     // Alles andere: geschlossen, bis eine App es explizit braucht.
     match /{document=**} {
