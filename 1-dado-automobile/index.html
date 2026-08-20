@@ -188,13 +188,13 @@
   } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
   import {
     getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot,
-    serverTimestamp, runTransaction,
+    serverTimestamp, runTransaction, arrayUnion, arrayRemove,
   } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
   import {
     getFunctions, httpsCallable,
   } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js";
   import {
-    getStorage, ref, uploadBytes, getDownloadURL,
+    getStorage, ref, uploadBytes, getDownloadURL, deleteObject,
   } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js";
 
   const firebaseConfig = {
@@ -414,10 +414,24 @@
       </div>
     `;
 
+    const dokumente = v.dokumente || [];
+    const dokumenteListHtml = dokumente.length
+      ? dokumente.map((d, i) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:0.85rem;">
+            <a href="${d.url}" target="_blank" rel="noopener">${d.name}</a>
+            <button type="button" class="danger" style="padding:2px 8px;" data-doc-index="${i}">Entfernen</button>
+          </div>
+        `).join("")
+      : '<p style="color:var(--text-dim);font-size:0.85rem;">Noch keine Dokumente gespeichert.</p>';
+
     // Buchhaltungs-/Auswertungsdaten stehen nur in der Fahrzeugakte (beim Bearbeiten),
     // nicht beim schnellen Anlegen eines neuen Fahrzeugs.
     const fahrzeugakteFields = `
       <h3 class="full" style="grid-column:1/-1;margin:6px 0 0 0;padding-top:10px;border-top:1px solid var(--border);">Fahrzeugakte — Buchhaltung &amp; Auswertung</h3>
+      <div class="field full">
+        <label>Gespeicherte Dokumente</label>
+        <div id="dokumenteList">${dokumenteListHtml}</div>
+      </div>
       <div class="field"><label>EK-Preis (€)</label><input name="ekPreis" type="number" step="0.01" value="${v.ekPreis ?? ""}" /></div>
       <div class="field"><label>EK-Datum</label><input name="ekDatum" type="date" value="${v.ekDatum || ""}" /></div>
       <div class="field"><label>Standtage (überschreiben, optional)</label><input name="standtageManual" type="number" min="0" value="${v.standtageManual ?? ""}" placeholder="leer = automatisch aus EK-/VK-Datum" /></div>
@@ -497,7 +511,7 @@
         setIfPresent("ez", data.ez);
         setIfPresent("ekPreis", data.ekPreis);
         setIfPresent("ekDatum", data.ekDatum);
-        statusEl.textContent = "Felder ausgefüllt — bitte prüfen und ggf. korrigieren, bevor du speicherst.";
+        statusEl.textContent = "Felder ausgefüllt — bitte prüfen und ggf. korrigieren. Die Datei wird beim Speichern dauerhaft in der Fahrzeugakte abgelegt.";
       } catch (e) {
         statusEl.textContent = "Fehler: " + e.message;
       }
@@ -509,6 +523,20 @@
           await deleteDoc(doc(db, "fahrzeuge", v.id));
           closeModal();
         }
+      });
+      document.querySelectorAll("[data-doc-index]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const d = dokumente[Number(btn.dataset.docIndex)];
+          if (!d) return;
+          if (!confirm(`"${d.name}" wirklich entfernen?`)) return;
+          try {
+            await deleteObject(ref(storage, d.url));
+          } catch (e) {
+            console.warn("Datei in Storage nicht gefunden (evtl. schon gelöscht):", e.message);
+          }
+          await setDoc(doc(db, "fahrzeuge", v.id), { dokumente: arrayRemove(d) }, { merge: true });
+          openVehicleModal({ ...v, dokumente: dokumente.filter((_, i) => i !== Number(btn.dataset.docIndex)) });
+        });
       });
     }
     document.getElementById("vehicleForm").addEventListener("submit", async (e) => {
@@ -538,6 +566,18 @@
         const storageRef = ref(storage, `fahrzeuge/${targetRef.id}/foto.${ext}`);
         await uploadBytes(storageRef, bildFile);
         data.bildUrl = await getDownloadURL(storageRef);
+      }
+
+      // Hochgeladene Rechnung/Dokument dauerhaft in der Fahrzeugakte speichern
+      // (unabhängig davon, ob "Automatisch ausfüllen" genutzt wurde).
+      const docFile = document.getElementById("invoicePdfInput").files[0];
+      if (docFile && docFile.size > 0) {
+        const safeName = docFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `fahrzeuge/${targetRef.id}/dokumente/${Date.now()}_${safeName}`;
+        const docStorageRef = ref(storage, path);
+        await uploadBytes(docStorageRef, docFile);
+        const docUrl = await getDownloadURL(docStorageRef);
+        data.dokumente = arrayUnion({ name: docFile.name, url: docUrl, uploadedAt: new Date().toISOString() });
       }
 
       // Fahrzeugakte-Felder (Buchhaltung/Auswertung) gibt es nur im Bearbeiten-Formular.

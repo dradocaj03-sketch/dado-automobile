@@ -2,7 +2,7 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    match /fahrzeuge/{vehicleId}/{fileName} {
+    match /fahrzeuge/{vehicleId}/{allFiles=**} {
       allow read, write: if request.auth != null
         && (request.auth.token.admin == true
             || ('apps' in request.auth.token && 'dado-automobile' in request.auth.token.apps));
