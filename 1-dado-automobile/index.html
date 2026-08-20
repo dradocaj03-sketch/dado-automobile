@@ -614,6 +614,29 @@
     await auth.currentUser?.getIdTokenResult(true);
     location.reload();
   };
+
+  // Massenimport für Fahrzeuge (z.B. aus bestehenden Inseraten). Erwartet ein Array von
+  // Objekten mit marke/modell/variante/ez/km/angebotspreis; ekPreis/ekDatum fehlen dabei
+  // (nicht öffentlich einsehbar) und müssen danach manuell nachgetragen werden.
+  window.bulkImportVehicles = async (list) => {
+    if (!auth.currentUser) { console.error("Bitte zuerst anmelden."); return; }
+    let count = 0;
+    for (const item of list) {
+      const nr = await nextVehicleNr();
+      await setDoc(doc(collection(db, "fahrzeuge")), {
+        marke: item.marke || "", modell: item.modell || "", variante: item.variante || "",
+        ez: item.ez || "", km: item.km || 0, status: "bestand",
+        ekPreis: 0, ekDatum: null, kosten: 0,
+        angebotspreis: item.angebotspreis || null, verkaufspreis: null, vkDatum: null,
+        notizen: "Importiert am " + new Date().toLocaleDateString("de-DE") + " — EK-Preis/-Datum bitte nachtragen.",
+        nr, createdAt: serverTimestamp(), createdBy: auth.currentUser.email,
+      }, { merge: true });
+      count++;
+    }
+    console.log(`${count} Fahrzeuge importiert.`);
+    return count;
+  };
+
   console.log("Falls die Oberfläche hakt: window.forceClaimRefresh() in der Konsole aufrufen.");
 </script>
 
