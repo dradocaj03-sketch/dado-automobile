@@ -214,10 +214,10 @@
   const storage = getStorage(fbApp);
 
   const EXPENSE_CATEGORIES = [
-    "Werbung (Mobile.de/Kleinanzeigen)", "Kraftstoff", "Handy", "Werkzeuge",
-    "Händler-Kennzeichen/Betriebshaftpflicht", "Betriebs- & Geschäftsausstattung",
-    "Aufbereitungszubehör", "Kfz-Steuer", "Gewerbe-/Rechtsschutzversicherung",
-    "Miete", "Software", "Fortbildung", "Sonstiges",
+    "Werbung (Mobile.de/Kleinanzeigen)", "Kraftstoff", "Transport", "Werkstatt", "TÜV",
+    "Handy", "Werkzeuge", "Händler-Kennzeichen/Betriebshaftpflicht",
+    "Betriebs- & Geschäftsausstattung", "Aufbereitungszubehör", "Kfz-Steuer",
+    "Gewerbe-/Rechtsschutzversicherung", "Miete", "Software", "Fortbildung", "Sonstiges",
   ];
 
   const DOCUMENT_CATEGORIES = [
@@ -232,6 +232,7 @@
   let vehicles = [];
   let expenses = [];
   let currentView = "bestand";
+  let currentDocFolder = null;
 
   const statusDot = document.getElementById("statusDot");
   const statusText = document.getElementById("statusText");
@@ -401,6 +402,7 @@
   function openVehicleModal(vehicle) {
     const isEdit = !!vehicle;
     const v = vehicle || { status: "bestand" };
+    let dokumente = v.dokumente ? [...v.dokumente] : [];
 
     const stammdatenFields = `
       <div class="field full">
@@ -423,31 +425,12 @@
       </div>
     `;
 
-    const dokumente = v.dokumente || [];
-    const docRow = (d) => {
-      const i = dokumente.indexOf(d);
-      return `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0 3px 10px;font-size:0.85rem;">
-          <a href="${d.url}" target="_blank" rel="noopener">${d.name}</a>
-          <button type="button" class="danger" style="padding:2px 8px;" data-doc-index="${i}">Entfernen</button>
-        </div>
-      `;
-    };
-    const alleKategorien = [...DOCUMENT_CATEGORIES, "Sonstiges"];
-    const dokumenteListHtml = alleKategorien.map((kat) => {
-      const docsInKat = dokumente.filter((d) => (d.kategorie || "Sonstiges") === kat);
-      if (docsInKat.length === 0) return "";
-      return `<div style="margin-bottom:8px;"><strong style="font-size:0.8rem;">${kat}</strong>${docsInKat.map(docRow).join("")}</div>`;
-    }).join("") || '<p style="color:var(--text-dim);font-size:0.85rem;">Noch keine Dokumente gespeichert.</p>';
-
     // Buchhaltungs-/Auswertungsdaten stehen nur in der Fahrzeugakte (beim Bearbeiten),
     // nicht beim schnellen Anlegen eines neuen Fahrzeugs.
     const fahrzeugakteFields = `
-      <h3 class="full" style="grid-column:1/-1;margin:6px 0 0 0;padding-top:10px;border-top:1px solid var(--border);">Fahrzeugakte — Buchhaltung &amp; Auswertung</h3>
-      <div class="field full">
-        <label>Gespeicherte Dokumente</label>
-        <div id="dokumenteList">${dokumenteListHtml}</div>
-      </div>
+      <h3 class="full" style="grid-column:1/-1;margin:6px 0 0 0;padding-top:10px;border-top:1px solid var(--border);">Fahrzeugakte — Dokumente</h3>
+      <div class="field full" id="docSection"></div>
+      <h3 class="full" style="grid-column:1/-1;margin:6px 0 0 0;padding-top:10px;border-top:1px solid var(--border);">Buchhaltung &amp; Auswertung</h3>
       <div class="field"><label>EK-Preis (€)</label><input name="ekPreis" type="number" step="0.01" value="${v.ekPreis ?? ""}" /></div>
       <div class="field"><label>EK-Datum</label><input name="ekDatum" type="date" value="${v.ekDatum || ""}" /></div>
       <div class="field"><label>Standtage (überschreiben, optional)</label><input name="standtageManual" type="number" min="0" value="${v.standtageManual ?? ""}" placeholder="leer = automatisch aus EK-/VK-Datum" /></div>
@@ -458,21 +441,180 @@
       <div class="field full"><label>Notizen</label><textarea name="notizen" rows="2">${v.notizen || ""}</textarea></div>
     `;
 
+    function renderDocSection() {
+      const container = document.getElementById("docSection");
+      if (!container) return;
+
+      if (currentDocFolder === null) {
+        container.innerHTML = `
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;">
+            ${DOCUMENT_CATEGORIES.map((kat) => {
+              const count = dokumente.filter((d) => (d.kategorie || "Sonstiges") === kat).length;
+              return `
+                <button type="button" class="secondary" data-folder="${kat}" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 8px;">
+                  <span style="font-size:1.8rem;">📁</span>
+                  <span style="font-size:0.75rem;text-align:center;">${kat}</span>
+                  <span style="font-size:0.7rem;color:var(--text-dim);">${count} Datei${count === 1 ? "" : "en"}</span>
+                </button>
+              `;
+            }).join("")}
+          </div>
+        `;
+        container.querySelectorAll("[data-folder]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            currentDocFolder = btn.dataset.folder;
+            renderDocSection();
+          });
+        });
+        return;
+      }
+
+      const docsInFolder = dokumente.filter((d) => (d.kategorie || "Sonstiges") === currentDocFolder);
+      const isFahrzeugdokumente = currentDocFolder === "Fahrzeugdokumente (ZB I, ZB II, HU, Scheckheft)";
+      const isExpenseFolder = !isFahrzeugdokumente && currentDocFolder !== "Einkaufsrechnung" && currentDocFolder !== "Verkaufsrechnung";
+
+      container.innerHTML = `
+        <button type="button" class="secondary" id="docFolderBack" style="margin-bottom:8px;">← Zurück zu Ordnern</button>
+        <strong style="display:block;margin-bottom:6px;">📁 ${currentDocFolder}</strong>
+        <div id="docFileList" style="margin-bottom:10px;">
+          ${docsInFolder.length ? docsInFolder.map((d) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:0.85rem;">
+              <a href="${d.url}" target="_blank" rel="noopener">${d.name}</a>
+              <button type="button" class="danger" style="padding:2px 8px;" data-doc-url="${encodeURIComponent(d.url)}">Entfernen</button>
+            </div>
+          `).join("") : '<p style="color:var(--text-dim);font-size:0.85rem;">Noch keine Dateien in diesem Ordner.</p>'}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <input type="file" id="docUploadInput" accept="application/pdf" />
+          <button type="button" class="secondary" id="docUploadBtn">Hochladen</button>
+          ${isFahrzeugdokumente ? "" : '<button type="button" class="secondary" id="docExtractBtn">Automatisch lesen</button>'}
+        </div>
+        <div id="docActionStatus" style="font-size:0.8rem;color:var(--text-dim);margin-top:6px;">
+          ${isFahrzeugdokumente ? "" : (isExpenseFolder ? 'Automatisch lesen schlägt danach eine Ausgabe zur Übernahme vor.' : 'Automatisch lesen befüllt die Felder oben im Formular.')}
+        </div>
+        <div id="expenseDraft"></div>
+      `;
+
+      document.getElementById("docFolderBack").addEventListener("click", () => {
+        currentDocFolder = null;
+        renderDocSection();
+      });
+
+      container.querySelectorAll("[data-doc-url]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const url = decodeURIComponent(btn.dataset.docUrl);
+          const d = dokumente.find((x) => x.url === url);
+          if (!d) return;
+          if (!confirm(`"${d.name}" wirklich entfernen?`)) return;
+          try {
+            await deleteObject(ref(storage, d.url));
+          } catch (e) {
+            console.warn("Datei in Storage nicht gefunden (evtl. schon gelöscht):", e.message);
+          }
+          await setDoc(doc(db, "fahrzeuge", v.id), { dokumente: arrayRemove(d) }, { merge: true });
+          dokumente = dokumente.filter((x) => x !== d);
+          renderDocSection();
+        });
+      });
+
+      document.getElementById("docUploadBtn").addEventListener("click", async () => {
+        const fileInput = document.getElementById("docUploadInput");
+        const statusEl = document.getElementById("docActionStatus");
+        const file = fileInput.files[0];
+        if (!file) { statusEl.textContent = "Bitte zuerst eine Datei auswählen."; return; }
+        statusEl.textContent = "Lädt hoch …";
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `fahrzeuge/${v.id}/dokumente/${Date.now()}_${safeName}`;
+        const storageRef = ref(storage, path);
+        await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(storageRef);
+        const newDoc = { name: file.name, url, uploadedAt: new Date().toISOString(), kategorie: currentDocFolder };
+        await setDoc(doc(db, "fahrzeuge", v.id), { dokumente: arrayUnion(newDoc) }, { merge: true });
+        dokumente.push(newDoc);
+        renderDocSection();
+      });
+
+      document.getElementById("docExtractBtn")?.addEventListener("click", async () => {
+        const fileInput = document.getElementById("docUploadInput");
+        const statusEl = document.getElementById("docActionStatus");
+        const file = fileInput.files[0];
+        if (!file) { statusEl.textContent = "Bitte zuerst eine Datei auswählen."; return; }
+        statusEl.textContent = "Lese Dokument … (das kann einige Sekunden dauern)";
+        try {
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(",")[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          const idToken = await auth.currentUser.getIdToken();
+          const resp = await fetch("/.netlify/functions/extract-invoice", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + idToken },
+            body: JSON.stringify({ pdfBase64: base64, kategorie: currentDocFolder }),
+          });
+          const result = await resp.json();
+          if (!resp.ok) { statusEl.textContent = "Fehler: " + (result.error || resp.statusText); return; }
+          const data = result.data || {};
+
+          if (currentDocFolder === "Einkaufsrechnung" || currentDocFolder === "Verkaufsrechnung") {
+            const form = document.getElementById("vehicleForm");
+            const setIfPresent = (name, value) => {
+              const el = form.elements[name];
+              if (el && value !== null && value !== undefined && value !== "") el.value = value;
+            };
+            if (currentDocFolder === "Einkaufsrechnung") {
+              setIfPresent("marke", data.marke);
+              setIfPresent("modell", data.modell);
+              setIfPresent("variante", data.variante);
+              setIfPresent("fin", data.fin);
+              setIfPresent("km", data.km);
+              setIfPresent("ez", data.ez);
+              setIfPresent("ekPreis", data.ekPreis);
+              setIfPresent("ekDatum", data.ekDatum);
+            } else if (currentDocFolder === "Verkaufsrechnung") {
+              setIfPresent("verkaufspreis", data.verkaufspreis);
+              setIfPresent("vkDatum", data.vkDatum);
+              if (form.elements["status"] && data.verkaufspreis) form.elements["status"].value = "verkauft";
+            }
+            statusEl.textContent = 'Felder ausgefüllt — bitte prüfen und unten auf „Speichern" klicken.';
+          } else if (isExpenseFolder) {
+            statusEl.textContent = "Beleg gelesen — bitte prüfen und übernehmen:";
+            const draftEl = document.getElementById("expenseDraft");
+            const beschreibung = (data.beschreibung || data.lieferant || "").replace(/"/g, "&quot;");
+            draftEl.innerHTML = `
+              <div class="card" style="margin-top:8px;padding:10px;">
+                <div class="form-grid" style="margin-bottom:8px;">
+                  <div class="field"><label>Betrag (€)</label><input type="number" step="0.01" id="draftBetrag" value="${data.betrag ?? ""}" /></div>
+                  <div class="field"><label>Datum</label><input type="date" id="draftDatum" value="${data.datum || ""}" /></div>
+                  <div class="field full"><label>Beschreibung</label><input type="text" id="draftBeschreibung" value="${beschreibung}" /></div>
+                </div>
+                <button type="button" class="primary" id="draftSaveBtn">Als Ausgabe übernehmen</button>
+              </div>
+            `;
+            document.getElementById("draftSaveBtn").addEventListener("click", async () => {
+              const betrag = Number(document.getElementById("draftBetrag").value) || 0;
+              const datum = document.getElementById("draftDatum").value || new Date().toISOString().slice(0, 10);
+              const beschr = document.getElementById("draftBeschreibung").value.trim();
+              const expenseKategorie = currentDocFolder.replace("Rechnung – ", "");
+              await setDoc(doc(collection(db, "ausgaben")), {
+                datum, betrag, kategorie: expenseKategorie, beschreibung: beschr,
+                fahrzeugId: v.id, fahrzeugLabel: `${v.marke || ""} ${v.modell || ""}`.trim(),
+                createdAt: serverTimestamp(), createdBy: auth.currentUser.email,
+              }, { merge: true });
+              draftEl.innerHTML = '<p style="color:var(--green);font-size:0.85rem;">Als Ausgabe gespeichert.</p>';
+            });
+          }
+        } catch (e) {
+          statusEl.textContent = "Fehler: " + e.message;
+        }
+      });
+    }
+
     modalRoot.innerHTML = `
       <div class="modal-overlay">
         <div class="modal">
           <h2>${isEdit ? "Fahrzeugakte" : "Fahrzeug anlegen"}</h2>
-          <div class="card" style="margin-bottom:14px;padding:12px 14px;">
-            <label style="font-size:0.8rem;font-weight:600;">Dokument hochladen (PDF)</label>
-            <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;align-items:center;">
-              <input type="file" id="invoicePdfInput" accept="application/pdf" />
-              <select id="invoiceDocCategory">
-                ${DOCUMENT_CATEGORIES.map((k) => `<option value="${k}">${k}</option>`).join("")}
-              </select>
-              <button type="button" class="secondary" id="extractInvoiceBtn">Automatisch ausfüllen</button>
-            </div>
-            <div id="extractStatus" style="font-size:0.8rem;color:var(--text-dim);margin-top:6px;">Die Datei wird beim Speichern in der gewählten Kategorie in der Fahrzeugakte abgelegt. „Automatisch ausfüllen" ist optional (nutzt KI, um Felder aus Rechnungen vorauszufüllen).</div>
-          </div>
           <form id="vehicleForm">
             <div class="form-grid">
               ${stammdatenFields}
@@ -489,53 +631,6 @@
     `;
     document.getElementById("cancelVehicleBtn").addEventListener("click", closeModal);
 
-    document.getElementById("extractInvoiceBtn").addEventListener("click", async () => {
-      const fileInput = document.getElementById("invoicePdfInput");
-      const statusEl = document.getElementById("extractStatus");
-      const file = fileInput.files[0];
-      if (!file) {
-        statusEl.textContent = "Bitte zuerst eine PDF-Datei auswählen.";
-        return;
-      }
-      statusEl.textContent = "Lese Rechnung … (das kann einige Sekunden dauern)";
-      try {
-        const base64 = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result.split(",")[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        const idToken = await auth.currentUser.getIdToken();
-        const resp = await fetch("/.netlify/functions/extract-invoice", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + idToken },
-          body: JSON.stringify({ pdfBase64: base64 }),
-        });
-        const result = await resp.json();
-        if (!resp.ok) {
-          statusEl.textContent = "Fehler: " + (result.error || resp.statusText);
-          return;
-        }
-        const data = result.data || {};
-        const form = document.getElementById("vehicleForm");
-        const setIfPresent = (name, value) => {
-          const el = form.elements[name];
-          if (el && value !== null && value !== undefined && value !== "") el.value = value;
-        };
-        setIfPresent("marke", data.marke);
-        setIfPresent("modell", data.modell);
-        setIfPresent("variante", data.variante);
-        setIfPresent("fin", data.fin);
-        setIfPresent("km", data.km);
-        setIfPresent("ez", data.ez);
-        setIfPresent("ekPreis", data.ekPreis);
-        setIfPresent("ekDatum", data.ekDatum);
-        statusEl.textContent = "Felder ausgefüllt — bitte prüfen und ggf. korrigieren. Die Datei wird beim Speichern dauerhaft in der Fahrzeugakte abgelegt.";
-      } catch (e) {
-        statusEl.textContent = "Fehler: " + e.message;
-      }
-    });
-
     if (isEdit) {
       document.getElementById("deleteVehicleBtn").addEventListener("click", async () => {
         if (confirm("Dieses Fahrzeug wirklich löschen?")) {
@@ -543,20 +638,8 @@
           closeModal();
         }
       });
-      document.querySelectorAll("[data-doc-index]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const d = dokumente[Number(btn.dataset.docIndex)];
-          if (!d) return;
-          if (!confirm(`"${d.name}" wirklich entfernen?`)) return;
-          try {
-            await deleteObject(ref(storage, d.url));
-          } catch (e) {
-            console.warn("Datei in Storage nicht gefunden (evtl. schon gelöscht):", e.message);
-          }
-          await setDoc(doc(db, "fahrzeuge", v.id), { dokumente: arrayRemove(d) }, { merge: true });
-          openVehicleModal({ ...v, dokumente: dokumente.filter((_, i) => i !== Number(btn.dataset.docIndex)) });
-        });
-      });
+      currentDocFolder = null;
+      renderDocSection();
     }
     document.getElementById("vehicleForm").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -585,19 +668,6 @@
         const storageRef = ref(storage, `fahrzeuge/${targetRef.id}/foto.${ext}`);
         await uploadBytes(storageRef, bildFile);
         data.bildUrl = await getDownloadURL(storageRef);
-      }
-
-      // Hochgeladene Rechnung/Dokument dauerhaft in der Fahrzeugakte speichern
-      // (unabhängig davon, ob "Automatisch ausfüllen" genutzt wurde).
-      const docFile = document.getElementById("invoicePdfInput").files[0];
-      if (docFile && docFile.size > 0) {
-        const kategorie = document.getElementById("invoiceDocCategory").value;
-        const safeName = docFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const path = `fahrzeuge/${targetRef.id}/dokumente/${Date.now()}_${safeName}`;
-        const docStorageRef = ref(storage, path);
-        await uploadBytes(docStorageRef, docFile);
-        const docUrl = await getDownloadURL(docStorageRef);
-        data.dokumente = arrayUnion({ name: docFile.name, url: docUrl, uploadedAt: new Date().toISOString(), kategorie });
       }
 
       // Fahrzeugakte-Felder (Buchhaltung/Auswertung) gibt es nur im Bearbeiten-Formular.
