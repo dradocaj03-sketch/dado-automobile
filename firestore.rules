@@ -17,7 +17,18 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Alles andere: geschlossen, bis die erste App ihre Collections braucht.
+    // App "Dado Automobile" - Fahrzeugbestand, Ausgaben, Nummernzähler.
+    match /fahrzeuge/{doc} {
+      allow read, write: if isAdmin() || hasApp('dado-automobile');
+    }
+    match /ausgaben/{doc} {
+      allow read, write: if isAdmin() || hasApp('dado-automobile');
+    }
+    match /meta/vehicleCounter {
+      allow read, write: if isAdmin() || hasApp('dado-automobile');
+    }
+
+    // Alles andere: geschlossen, bis eine App es explizit braucht.
     match /{document=**} {
       allow read, write: if false;
     }

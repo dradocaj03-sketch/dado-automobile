@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dado Automobile — Verwaltung</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --purple: #7c3aed;
+    --purple-dark: #5b21b6;
+    --green: #16a34a;
+    --red: #dc2626;
+    --border: #e2e2e7;
+    --bg-card: #ffffff;
+    --bg-page: #f5f5f8;
+    --text: #1a1a1f;
+    --text-dim: #666672;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --border: #333338;
+      --bg-card: #1c1c22;
+      --bg-page: #121216;
+      --text: #f0f0f2;
+      --text-dim: #a0a0aa;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    margin: 0; background: var(--bg-page); color: var(--text);
+  }
+  header {
+    background: linear-gradient(90deg, var(--purple-dark), var(--purple));
+    color: white; padding: 14px 20px; display: flex; align-items: center;
+    justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  }
+  header h1 { font-size: 1.1rem; margin: 0; display: flex; align-items: center; gap: 8px; }
+  .badge { font-size: 0.65rem; font-weight: normal; padding: 2px 8px; border-radius: 10px; background: rgba(255,255,255,0.25); }
+  nav { display: flex; gap: 4px; }
+  nav button {
+    background: none; border: none; color: white; opacity: 0.75; padding: 8px 14px;
+    border-radius: 6px; cursor: pointer; font-size: 0.9rem;
+  }
+  nav button.active { opacity: 1; background: rgba(255,255,255,0.18); font-weight: 600; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px; }
+  #gate { text-align: center; padding: 80px 20px; }
+  #diagnose { font-size: 0.8rem; color: var(--text-dim); margin-top: 6px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .status-dot.ok { background: var(--green); }
+  .status-dot.err { background: var(--red); }
+  button.primary {
+    background: var(--purple); color: white; border: none; padding: 8px 16px;
+    border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600;
+  }
+  button.secondary {
+    background: transparent; color: var(--text); border: 1px solid var(--border);
+    padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.9rem;
+  }
+  button.danger { background: var(--red); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--text-dim); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; }
+  tr:hover td { background: rgba(124,58,237,0.05); }
+  .profit-pos { color: var(--green); font-weight: 600; }
+  .profit-neg { color: var(--red); font-weight: 600; }
+  .status-pill { font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .status-bestand { background: #dbeafe; color: #1e40af; }
+  .status-reserviert { background: #fef3c7; color: #92400e; }
+  .status-verkauft { background: #dcfce7; color: #166534; }
+  @media (prefers-color-scheme: dark) {
+    .status-bestand { background: #1e3a5f; color: #93c5fd; }
+    .status-reserviert { background: #4a3a0a; color: #fde68a; }
+    .status-verkauft { background: #0f3d24; color: #86efac; }
+  }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .kpi .value { font-size: 1.4rem; font-weight: 700; }
+  .kpi .label { font-size: 0.75rem; color: var(--text-dim); }
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 0.75rem; color: var(--text-dim); }
+  input, select, textarea {
+    padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 0.88rem; background: var(--bg-card); color: var(--text);
+  }
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex;
+    align-items: center; justify-content: center; z-index: 100; padding: 20px;
+  }
+  .modal { background: var(--bg-card); border-radius: 12px; padding: 24px; max-width: 520px; width: 100%; max-height: 90vh; overflow-y: auto; }
+  .modal h2 { margin-top: 0; font-size: 1.1rem; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+  .hidden { display: none !important; }
+  .empty { text-align: center; padding: 40px; color: var(--text-dim); }
+  .monthly-table td:first-child { text-transform: capitalize; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Dado Automobile <span class="badge">v0.1</span></h1>
+  <nav id="mainNav" class="hidden">
+    <button data-view="bestand" class="active">Bestand</button>
+    <button data-view="auswertungen">Auswertungen</button>
+    <button data-view="ausgaben">Ausgaben</button>
+  </nav>
+</header>
+
+<main>
+  <div id="gate">
+    <div id="diagnose"><span class="status-dot" id="statusDot"></span> <span id="statusText">Lädt…</span></div>
+    <br />
+    <button class="primary" id="loginBtn">Mit Google anmelden</button>
+  </div>
+
+  <div id="app" class="hidden">
+    <section id="view-bestand">
+      <div class="toolbar">
+        <h2 style="margin:0;">Fahrzeugbestand</h2>
+        <button class="primary" id="addVehicleBtn">+ Fahrzeug hinzufügen</button>
+      </div>
+      <div class="card" style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th>Nr.</th><th>Fahrzeug</th><th>Status</th><th>Standtage</th>
+            <th>Profit</th><th>Preis</th><th>EZ</th><th>KM</th><th></th>
+          </tr></thead>
+          <tbody id="vehicleTableBody"></tbody>
+        </table>
+        <div id="vehicleEmpty" class="empty hidden">Noch keine Fahrzeuge erfasst.</div>
+      </div>
+    </section>
+
+    <section id="view-auswertungen" class="hidden">
+      <h2>Auswertungen</h2>
+      <div class="filters">
+        <div class="field">
+          <label>Von</label>
+          <input type="date" id="filterVon" />
+        </div>
+        <div class="field">
+          <label>Bis</label>
+          <input type="date" id="filterBis" />
+        </div>
+        <button class="secondary" id="resetFilterBtn">Zurücksetzen</button>
+      </div>
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <div class="card">
+        <h3 style="margin-top:0;">Pro Monat (nach Verkaufsdatum)</h3>
+        <table class="monthly-table">
+          <thead><tr><th>Monat</th><th>Verkäufe</th><th>Umsatz</th><th>Rohgewinn</th><th>Ø Standtage</th></tr></thead>
+          <tbody id="monthlyTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-ausgaben" class="hidden">
+      <div class="toolbar">
+        <h2 style="margin:0;">Ausgaben</h2>
+        <button class="primary" id="addExpenseBtn">+ Ausgabe hinzufügen</button>
+      </div>
+      <div class="card" style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Datum</th><th>Kategorie</th><th>Beschreibung</th><th>Betrag</th><th></th></tr></thead>
+          <tbody id="expenseTableBody"></tbody>
+        </table>
+        <div id="expenseEmpty" class="empty hidden">Noch keine Ausgaben erfasst.</div>
+        <p style="text-align:right; font-weight:600; margin-top:10px;">Summe: <span id="expenseSum">0 €</span></p>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="modalRoot"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+  import {
+    getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged,
+  } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+  import {
+    getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot,
+    serverTimestamp, runTransaction,
+  } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+  import {
+    getFunctions, httpsCallable,
+  } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js";
+
+  const firebaseConfig = {
+    projectId: "dado-automobile-ca04c",
+    appId: "1:163470074312:web:b69cf5e92c93e94f5820fd",
+    storageBucket: "dado-automobile-ca04c.firebasestorage.app",
+    apiKey: "AIzaSyCN3gy4mgD5MbjNz5r6P8FKxMmIuELCTO4",
+    authDomain: "dado-automobile-ca04c.firebaseapp.com",
+    messagingSenderId: "163470074312",
+  };
+
+  const fbApp = initializeApp(firebaseConfig);
+  const auth = getAuth(fbApp);
+  const db = getFirestore(fbApp);
+  const functions = getFunctions(fbApp);
+  const claimSelfFromAdmins = httpsCallable(functions, "claimSelfFromAdmins");
+
+  const EXPENSE_CATEGORIES = [
+    "Werbung (Mobile.de/Kleinanzeigen)", "Kraftstoff", "Handy", "Werkzeuge",
+    "Händler-Kennzeichen/Betriebshaftpflicht", "Betriebs- & Geschäftsausstattung",
+    "Aufbereitungszubehör", "Kfz-Steuer", "Gewerbe-/Rechtsschutzversicherung",
+    "Miete", "Software", "Fortbildung", "Sonstiges",
+  ];
+
+  let vehicles = [];
+  let expenses = [];
+  let currentView = "bestand";
+
+  const statusDot = document.getElementById("statusDot");
+  const statusText = document.getElementById("statusText");
+  const gate = document.getElementById("gate");
+  const appEl = document.getElementById("app");
+  const mainNav = document.getElementById("mainNav");
+  const modalRoot = document.getElementById("modalRoot");
+
+  function setStatus(ok, text) {
+    statusDot.className = "status-dot " + (ok ? "ok" : "err");
+    statusText.textContent = text;
+  }
+
+  function fmtEuro(n) {
+    return (n || 0).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+  }
+
+  function daysBetween(a, b) {
+    const ms = new Date(b) - new Date(a);
+    return Math.max(0, Math.round(ms / 86400000));
+  }
+
+  function standtage(v) {
+    if (!v.ekDatum) return null;
+    const end = v.vkDatum || new Date().toISOString().slice(0, 10);
+    return daysBetween(v.ekDatum, end);
+  }
+
+  function profit(v) {
+    const verkaufspreis = v.status === "verkauft" ? (v.verkaufspreis || 0) : (v.angebotspreis || 0);
+    return verkaufspreis - (v.ekPreis || 0) - (v.kosten || 0);
+  }
+
+  // ---------- Navigation ----------
+  document.getElementById("mainNav").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-view]");
+    if (!btn) return;
+    currentView = btn.dataset.view;
+    document.querySelectorAll("#mainNav button").forEach((b) => b.classList.toggle("active", b === btn));
+    document.querySelectorAll("main > div#app > section").forEach((s) => s.classList.add("hidden"));
+    document.getElementById("view-" + currentView).classList.remove("hidden");
+    if (currentView === "auswertungen") renderAuswertungen();
+  });
+
+  // ---------- Auth ----------
+  document.getElementById("loginBtn").addEventListener("click", async () => {
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+    } catch (e) {
+      setStatus(false, "Anmeldung fehlgeschlagen: " + e.message);
+    }
+  });
+
+  let unsubVehicles = null;
+  let unsubExpenses = null;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      gate.classList.remove("hidden");
+      appEl.classList.add("hidden");
+      mainNav.classList.add("hidden");
+      if (unsubVehicles) unsubVehicles();
+      if (unsubExpenses) unsubExpenses();
+      setStatus(true, "Nicht angemeldet.");
+      return;
+    }
+
+    setStatus(true, "Gleiche Rechte ab…");
+    try {
+      await claimSelfFromAdmins();
+      await user.getIdTokenResult(true);
+    } catch (e) {
+      setStatus(false, "Rechte-Abgleich fehlgeschlagen: " + e.message);
+      return;
+    }
+
+    const tokenResult = await user.getIdTokenResult();
+    const claims = tokenResult.claims;
+    const hasAccess = claims.admin === true || (Array.isArray(claims.apps) && claims.apps.includes("dado-automobile"));
+
+    if (!hasAccess) {
+      gate.classList.remove("hidden");
+      appEl.classList.add("hidden");
+      mainNav.classList.add("hidden");
+      setStatus(false, "Angemeldet als " + user.email + ", aber kein Zugriff auf diese App.");
+      return;
+    }
+
+    gate.classList.add("hidden");
+    appEl.classList.remove("hidden");
+    mainNav.classList.remove("hidden");
+    setStatus(true, "Bereit.");
+
+    if (unsubVehicles) unsubVehicles();
+    if (unsubExpenses) unsubExpenses();
+
+    unsubVehicles = onSnapshot(collection(db, "fahrzeuge"), (snap) => {
+      vehicles = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      vehicles.sort((a, b) => (b.ekDatum || "").localeCompare(a.ekDatum || ""));
+      renderBestand();
+      if (currentView === "auswertungen") renderAuswertungen();
+    }, (err) => setStatus(false, "Fehler beim Laden der Fahrzeuge: " + err.message));
+
+    unsubExpenses = onSnapshot(collection(db, "ausgaben"), (snap) => {
+      expenses = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      expenses.sort((a, b) => (b.datum || "").localeCompare(a.datum || ""));
+      renderAusgaben();
+    }, (err) => setStatus(false, "Fehler beim Laden der Ausgaben: " + err.message));
+  });
+
+  // ---------- Bestand ----------
+  function renderBestand() {
+    const tbody = document.getElementById("vehicleTableBody");
+    const empty = document.getElementById("vehicleEmpty");
+    tbody.innerHTML = "";
+    empty.classList.toggle("hidden", vehicles.length > 0);
+
+    vehicles.forEach((v) => {
+      const p = profit(v);
+      const st = standtage(v);
+      const preisAnzeige = v.status === "verkauft" ? v.verkaufspreis : v.angebotspreis;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${v.nr ?? "-"}</td>
+        <td>${v.marke || ""} ${v.modell || ""}<br><span style="color:var(--text-dim);font-size:0.78rem;">${v.variante || ""}</span></td>
+        <td><span class="status-pill status-${v.status}">${statusLabel(v.status)}</span></td>
+        <td>${st ?? "-"}</td>
+        <td class="${p >= 0 ? "profit-pos" : "profit-neg"}">${fmtEuro(p)}</td>
+        <td>${fmtEuro(preisAnzeige)}</td>
+        <td>${v.ez || "-"}</td>
+        <td>${(v.km || 0).toLocaleString("de-DE")} km</td>
+        <td><button class="secondary" data-edit="${v.id}">Verwalten</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll("[data-edit]").forEach((btn) => {
+      btn.addEventListener("click", () => openVehicleModal(vehicles.find((v) => v.id === btn.dataset.edit)));
+    });
+  }
+
+  function statusLabel(s) {
+    return { bestand: "Im Bestand", reserviert: "Reserviert", verkauft: "Verkauft" }[s] || s;
+  }
+
+  async function nextVehicleNr() {
+    const counterRef = doc(db, "meta", "vehicleCounter");
+    return runTransaction(db, async (tx) => {
+      const snap = await tx.get(counterRef);
+      const next = snap.exists() ? (snap.data().next || 1) : 1;
+      tx.set(counterRef, { next: next + 1 }, { merge: true });
+      return next;
+    });
+  }
+
+  document.getElementById("addVehicleBtn").addEventListener("click", () => openVehicleModal(null));
+
+  function openVehicleModal(vehicle) {
+    const isEdit = !!vehicle;
+    const v = vehicle || { status: "bestand", ekDatum: new Date().toISOString().slice(0, 10) };
+    modalRoot.innerHTML = `
+      <div class="modal-overlay">
+        <div class="modal">
+          <h2>${isEdit ? "Fahrzeug bearbeiten" : "Fahrzeug hinzufügen"}</h2>
+          <form id="vehicleForm">
+            <div class="form-grid">
+              <div class="field"><label>Marke</label><input name="marke" value="${v.marke || ""}" required /></div>
+              <div class="field"><label>Modell</label><input name="modell" value="${v.modell || ""}" required /></div>
+              <div class="field full"><label>Ausstattung/Variante (optional)</label><input name="variante" value="${v.variante || ""}" /></div>
+              <div class="field"><label>Erstzulassung (MM/JJJJ)</label><input name="ez" value="${v.ez || ""}" placeholder="z.B. 03/2019" /></div>
+              <div class="field"><label>Kilometerstand</label><input name="km" type="number" value="${v.km || ""}" /></div>
+              <div class="field"><label>Status</label>
+                <select name="status">
+                  <option value="bestand" ${v.status === "bestand" ? "selected" : ""}>Im Bestand</option>
+                  <option value="reserviert" ${v.status === "reserviert" ? "selected" : ""}>Reserviert</option>
+                  <option value="verkauft" ${v.status === "verkauft" ? "selected" : ""}>Verkauft</option>
+                </select>
+              </div>
+              <div class="field"><label>EK-Preis (€)</label><input name="ekPreis" type="number" step="0.01" value="${v.ekPreis ?? ""}" required /></div>
+              <div class="field"><label>EK-Datum</label><input name="ekDatum" type="date" value="${v.ekDatum || ""}" required /></div>
+              <div class="field"><label>Weitere Kosten (€)</label><input name="kosten" type="number" step="0.01" value="${v.kosten ?? 0}" /></div>
+              <div class="field"><label>Angebotspreis (€)</label><input name="angebotspreis" type="number" step="0.01" value="${v.angebotspreis ?? ""}" /></div>
+              <div class="field"><label>Verkaufspreis (€, falls verkauft)</label><input name="verkaufspreis" type="number" step="0.01" value="${v.verkaufspreis ?? ""}" /></div>
+              <div class="field"><label>VK-Datum (falls verkauft)</label><input name="vkDatum" type="date" value="${v.vkDatum || ""}" /></div>
+              <div class="field full"><label>Notizen</label><textarea name="notizen" rows="2">${v.notizen || ""}</textarea></div>
+            </div>
+            <div class="modal-actions">
+              ${isEdit ? '<button type="button" class="danger" id="deleteVehicleBtn">Löschen</button>' : ""}
+              <button type="button" class="secondary" id="cancelVehicleBtn">Abbrechen</button>
+              <button type="submit" class="primary">Speichern</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    document.getElementById("cancelVehicleBtn").addEventListener("click", closeModal);
+    if (isEdit) {
+      document.getElementById("deleteVehicleBtn").addEventListener("click", async () => {
+        if (confirm("Dieses Fahrzeug wirklich löschen?")) {
+          await deleteDoc(doc(db, "fahrzeuge", v.id));
+          closeModal();
+        }
+      });
+    }
+    document.getElementById("vehicleForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const data = {
+        marke: fd.get("marke").trim(),
+        modell: fd.get("modell").trim(),
+        variante: fd.get("variante").trim(),
+        ez: fd.get("ez").trim(),
+        km: Number(fd.get("km")) || 0,
+        status: fd.get("status"),
+        ekPreis: Number(fd.get("ekPreis")) || 0,
+        ekDatum: fd.get("ekDatum"),
+        kosten: Number(fd.get("kosten")) || 0,
+        angebotspreis: fd.get("angebotspreis") ? Number(fd.get("angebotspreis")) : null,
+        verkaufspreis: fd.get("verkaufspreis") ? Number(fd.get("verkaufspreis")) : null,
+        vkDatum: fd.get("vkDatum") || null,
+        notizen: fd.get("notizen").trim(),
+        updatedAt: serverTimestamp(),
+        updatedBy: auth.currentUser.email,
+      };
+      if (isEdit) {
+        await setDoc(doc(db, "fahrzeuge", v.id), data, { merge: true });
+      } else {
+        data.nr = await nextVehicleNr();
+        data.createdAt = serverTimestamp();
+        data.createdBy = auth.currentUser.email;
+        await setDoc(doc(collection(db, "fahrzeuge")), data, { merge: true });
+      }
+      closeModal();
+    });
+  }
+
+  function closeModal() {
+    modalRoot.innerHTML = "";
+  }
+
+  // ---------- Auswertungen ----------
+  function renderAuswertungen() {
+    const von = document.getElementById("filterVon").value;
+    const bis = document.getElementById("filterBis").value;
+
+    const verkaufte = vehicles.filter((v) => {
+      if (v.status !== "verkauft" || !v.vkDatum) return false;
+      if (von && v.vkDatum < von) return false;
+      if (bis && v.vkDatum > bis) return false;
+      return true;
+    });
+
+    const umsatz = verkaufte.reduce((s, v) => s + (v.verkaufspreis || 0), 0);
+    const rohgewinn = verkaufte.reduce((s, v) => s + profit(v), 0);
+    const anzahl = verkaufte.length;
+    const avgProfit = anzahl ? rohgewinn / anzahl : 0;
+    const avgStandtage = anzahl ? verkaufte.reduce((s, v) => s + (standtage(v) || 0), 0) / anzahl : 0;
+    const avgMarge = umsatz ? (rohgewinn / umsatz) * 100 : 0;
+
+    const kpis = [
+      { label: "Verkäufe", value: anzahl },
+      { label: "Umsatz", value: fmtEuro(umsatz) },
+      { label: "Rohgewinn", value: fmtEuro(rohgewinn) },
+      { label: "Ø Rohgewinn/Fahrzeug", value: fmtEuro(avgProfit) },
+      { label: "Ø Gewinnspanne", value: avgMarge.toFixed(1) + " %" },
+      { label: "Ø Standtage", value: avgStandtage.toFixed(1) },
+    ];
+    document.getElementById("kpiGrid").innerHTML = kpis.map((k) => `
+      <div class="kpi"><div class="value">${k.value}</div><div class="label">${k.label}</div></div>
+    `).join("");
+
+    // Pro Monat
+    const byMonth = {};
+    verkaufte.forEach((v) => {
+      const month = v.vkDatum.slice(0, 7);
+      if (!byMonth[month]) byMonth[month] = { count: 0, umsatz: 0, rohgewinn: 0, standtageSum: 0 };
+      byMonth[month].count++;
+      byMonth[month].umsatz += v.verkaufspreis || 0;
+      byMonth[month].rohgewinn += profit(v);
+      byMonth[month].standtageSum += standtage(v) || 0;
+    });
+    const months = Object.keys(byMonth).sort().reverse();
+    const tbody = document.getElementById("monthlyTableBody");
+    if (months.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-dim);">Noch keine verkauften Fahrzeuge im gewählten Zeitraum.</td></tr>';
+    } else {
+      tbody.innerHTML = months.map((m) => {
+        const d = byMonth[m];
+        return `<tr>
+          <td>${m}</td><td>${d.count}</td><td>${fmtEuro(d.umsatz)}</td>
+          <td>${fmtEuro(d.rohgewinn)}</td><td>${(d.standtageSum / d.count).toFixed(1)}</td>
+        </tr>`;
+      }).join("");
+    }
+  }
+
+  document.getElementById("filterVon").addEventListener("change", renderAuswertungen);
+  document.getElementById("filterBis").addEventListener("change", renderAuswertungen);
+  document.getElementById("resetFilterBtn").addEventListener("click", () => {
+    document.getElementById("filterVon").value = "";
+    document.getElementById("filterBis").value = "";
+    renderAuswertungen();
+  });
+
+  // ---------- Ausgaben ----------
+  function renderAusgaben() {
+    const tbody = document.getElementById("expenseTableBody");
+    const empty = document.getElementById("expenseEmpty");
+    tbody.innerHTML = "";
+    empty.classList.toggle("hidden", expenses.length > 0);
+
+    let sum = 0;
+    expenses.forEach((ex) => {
+      sum += ex.betrag || 0;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${ex.datum || "-"}</td>
+        <td>${ex.kategorie || "-"}</td>
+        <td>${ex.beschreibung || ""}</td>
+        <td>${fmtEuro(ex.betrag)}</td>
+        <td><button class="secondary" data-edit-exp="${ex.id}">Verwalten</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    document.getElementById("expenseSum").textContent = fmtEuro(sum);
+
+    tbody.querySelectorAll("[data-edit-exp]").forEach((btn) => {
+      btn.addEventListener("click", () => openExpenseModal(expenses.find((e) => e.id === btn.dataset.editExp)));
+    });
+  }
+
+  document.getElementById("addExpenseBtn").addEventListener("click", () => openExpenseModal(null));
+
+  function openExpenseModal(expense) {
+    const isEdit = !!expense;
+    const ex = expense || { datum: new Date().toISOString().slice(0, 10) };
+    modalRoot.innerHTML = `
+      <div class="modal-overlay">
+        <div class="modal">
+          <h2>${isEdit ? "Ausgabe bearbeiten" : "Ausgabe hinzufügen"}</h2>
+          <form id="expenseForm">
+            <div class="form-grid">
+              <div class="field"><label>Datum</label><input name="datum" type="date" value="${ex.datum || ""}" required /></div>
+              <div class="field"><label>Betrag (€)</label><input name="betrag" type="number" step="0.01" value="${ex.betrag ?? ""}" required /></div>
+              <div class="field full"><label>Kategorie</label>
+                <select name="kategorie">
+                  ${EXPENSE_CATEGORIES.map((c) => `<option ${ex.kategorie === c ? "selected" : ""}>${c}</option>`).join("")}
+                </select>
+              </div>
+              <div class="field full"><label>Beschreibung</label><input name="beschreibung" value="${ex.beschreibung || ""}" /></div>
+            </div>
+            <div class="modal-actions">
+              ${isEdit ? '<button type="button" class="danger" id="deleteExpenseBtn">Löschen</button>' : ""}
+              <button type="button" class="secondary" id="cancelExpenseBtn">Abbrechen</button>
+              <button type="submit" class="primary">Speichern</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    document.getElementById("cancelExpenseBtn").addEventListener("click", closeModal);
+    if (isEdit) {
+      document.getElementById("deleteExpenseBtn").addEventListener("click", async () => {
+        if (confirm("Diese Ausgabe wirklich löschen?")) {
+          await deleteDoc(doc(db, "ausgaben", ex.id));
+          closeModal();
+        }
+      });
+    }
+    document.getElementById("expenseForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const data = {
+        datum: fd.get("datum"),
+        betrag: Number(fd.get("betrag")) || 0,
+        kategorie: fd.get("kategorie"),
+        beschreibung: fd.get("beschreibung").trim(),
+        updatedAt: serverTimestamp(),
+        updatedBy: auth.currentUser.email,
+      };
+      if (isEdit) {
+        await setDoc(doc(db, "ausgaben", ex.id), data, { merge: true });
+      } else {
+        data.createdAt = serverTimestamp();
+        data.createdBy = auth.currentUser.email;
+        await setDoc(doc(collection(db, "ausgaben")), data, { merge: true });
+      }
+      closeModal();
+    });
+  }
+
+  // Wiederherstellungsfunktion global erreichbar (siehe CLAUDE.md Betriebsregeln).
+  window.forceClaimRefresh = async () => {
+    await claimSelfFromAdmins();
+    await auth.currentUser?.getIdTokenResult(true);
+    location.reload();
+  };
+  console.log("Falls die Oberfläche hakt: window.forceClaimRefresh() in der Konsole aufrufen.");
+</script>
+
+</body>
+</html>
