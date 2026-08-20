@@ -16,9 +16,12 @@ if (!admin.apps.length) {
   });
 }
 
-const MODEL = "claude-sonnet-5";
-const MAX_PDF_BYTES = 8 * 1024 * 1024; // 8 MB
-const RATE_LIMIT_PER_HOUR = 20;
+// Haiku statt Sonnet: deutlich günstiger und für strukturierte Rechnungsfelder-Erkennung
+// völlig ausreichend (kein komplexes Schlussfolgern nötig).
+const MODEL = "claude-haiku-4-5-20251001";
+const MAX_PDF_BYTES = 5 * 1024 * 1024; // 5 MB - deckt normale Rechnungen/Verträge ab, begrenzt Kosten pro Aufruf
+const MAX_TOKENS = 400; // die Antwort ist ein kleines JSON-Objekt, mehr wird nicht gebraucht
+const RATE_LIMIT_PER_HOUR = 10;
 
 const PROMPT_SUFFIX = "\n\nWenn ein Feld nicht sicher zu erkennen ist, setze es auf null. Erfinde keine Werte. Antworte AUSSCHLIESSLICH mit dem JSON-Objekt, ohne Erklärtext, ohne Markdown-Codeblock.";
 
@@ -120,7 +123,7 @@ exports.handler = async (event) => {
   try {
     const message = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 1024,
+      max_tokens: MAX_TOKENS,
       messages: [{
         role: "user",
         content: [
