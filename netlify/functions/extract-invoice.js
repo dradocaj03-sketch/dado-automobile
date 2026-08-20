@@ -5,7 +5,11 @@ if (!admin.apps.length) {
   // verifyIdToken() braucht keine Credentials (prüft nur die Signatur gegen Googles
   // öffentliche Zertifikate), aber admin.firestore() für den Rate-Limit-Zähler schon -
   // deshalb hier ein echtes Service-Account-Zertifikat aus der Umgebungsvariable.
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  // Base64-kodiert hinterlegt, weil rohes Mehrzeilen-JSON in manchen Env-Var-UIs
+  // durch automatische Zeichen-/Anführungszeichen-Ersetzung beschädigt werden kann.
+  const serviceAccount = JSON.parse(
+    Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_JSON_B64, "base64").toString("utf8")
+  );
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     projectId: "dado-automobile-ca04c",
