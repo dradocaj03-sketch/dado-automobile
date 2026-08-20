@@ -7,3 +7,7 @@ _backups/
 
 # Local Netlify folder
 .netlify
+
+# Enthält echte Umsatz-/Gewinnzahlen - nicht committen solange Repo öffentlich ist
+# (siehe CLAUDE.md "Offene Punkte" - Repo muss vor Produktivbetrieb wieder privat werden)
+GESCHAEFTSKONTEXT.md

@@ -5,6 +5,13 @@ aktualisiert (siehe Betriebsregeln unten). Bei Sitzungsbeginn zuerst lesen.
 
 ---
 
+## Geschäftskontext
+
+Ausführlicher Geschäftskontext (Finanzzahlen, KPIs, bestehende Prozesse/Vorlagen,
+steuerliche Besonderheiten) liegt in `GESCHAEFTSKONTEXT.md` im Projektordner — **absichtlich
+nicht committet** (enthält echte Umsatz-/Gewinnzahlen), solange das Repo öffentlich ist.
+Vor dem Planen des Datenmodells der ersten App lesen.
+
 ## Was das ist
 
 Interne Web-Apps für den Autohandel **Dado Automobile (Inh. David Radocaj)**, betrieben
