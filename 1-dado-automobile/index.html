@@ -234,6 +234,15 @@
     return (n || 0).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
   }
 
+  function fmtDate(iso) {
+    if (!iso) return "-";
+    // Ältere Einträge können noch im Format "MM/JJJJ" vorliegen (vor der Umstellung auf volle Daten).
+    if (/^\d{2}\/\d{4}$/.test(iso)) return iso;
+    const d = new Date(iso);
+    if (isNaN(d)) return iso;
+    return d.toLocaleDateString("de-DE");
+  }
+
   function daysBetween(a, b) {
     const ms = new Date(b) - new Date(a);
     return Math.max(0, Math.round(ms / 86400000));
@@ -346,7 +355,7 @@
         <td>${st ?? "-"}</td>
         <td class="${p >= 0 ? "profit-pos" : "profit-neg"}">${fmtEuro(p)}</td>
         <td>${fmtEuro(preisAnzeige)}</td>
-        <td>${v.ez || "-"}</td>
+        <td>${fmtDate(v.ez)}</td>
         <td>${(v.km || 0).toLocaleString("de-DE")} km</td>
         <td><button class="secondary" data-edit="${v.id}">Verwalten</button></td>
       `;
@@ -387,7 +396,7 @@
               <div class="field"><label>Modell</label><input name="modell" value="${v.modell || ""}" required /></div>
               <div class="field full"><label>Ausstattung/Variante (optional)</label><input name="variante" value="${v.variante || ""}" /></div>
               <div class="field full"><label>Fahrgestellnummer VIN</label><input name="fin" value="${v.fin || ""}" placeholder="17-stellig" maxlength="17" style="text-transform:uppercase;" /></div>
-              <div class="field"><label>Erstzulassung (MM/JJJJ)</label><input name="ez" value="${v.ez || ""}" placeholder="z.B. 03/2019" /></div>
+              <div class="field"><label>Erstzulassung</label><input name="ez" type="date" value="${v.ez || ""}" /></div>
               <div class="field"><label>Kilometerstand</label><input name="km" type="number" value="${v.km || ""}" /></div>
               <div class="field"><label>Status</label>
                 <select name="status">
