@@ -1,7 +1,25 @@
 # Dado Automobile — App-Notizen
 
-**Version:** v0.3
+**Version:** v0.4
 **Live:** https://dado-automobile.netlify.app/ (Root leitet auf diese App um, siehe `_redirects`)
+
+## Umfang v0.4 (neu gegenüber v0.3)
+
+- **Navigation komplett umgebaut:** von der kurzen horizontalen Kopfleiste auf eine volle
+  Sidebar-Navigation links (volle Seitenhöhe), 1:1 nach echtem CarCuro-Screenshot (David,
+  2026-08-20) — inkl. aller 14 CarCuro-Module in exakt gleicher Reihenfolge/Gruppierung
+  (Dashboard, Fahrzeuge, Aufträge, Rechnungen, Reservierung, Kunden, Anfragen, Social
+  Media, Webseite, Tools, Verträge, dann Trennlinie, Mitarbeiter, Zugänge, Profil),
+  aufklappbare Untermenüs für Module mit Kind-Elementen (Fahrzeuge, Rechnungen, Social
+  Media, Webseite, Tools — Kind-Bezeichnungen aus `CARCURO_REFERENZ.md`).
+  - Nur die tatsächlich gebauten Module verlinken auf echte Ansichten: Dashboard,
+    Fahrzeuge→Bestand/Auswertungen, Rechnungen→Neue Rechnung/Rechnungen/Kassabuch/
+    Ausgaben. Alle anderen zeigen beim Klick einen Hinweis „ist noch nicht gebaut" statt
+    stillschweigend nichts zu tun — Regel „Prüfe durch Ausführen" / kein stiller Rückfall.
+  - `Auswertungen` und `Ausgaben` sind dadurch keine eigenen Reiter mehr, sondern Unterpunkte
+    von Fahrzeuge bzw. Rechnungen — 1:1 wie bei CarCuro.
+  - Icons sind vereinfachte Emoji (kein Icon-Set eingebunden), Farben/Layout/Aufklapp-
+    verhalten sind an CarCuro angelehnt.
 
 ## Layout
 

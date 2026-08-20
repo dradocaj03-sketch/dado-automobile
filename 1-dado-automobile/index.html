@@ -19,6 +19,9 @@
     --dash-navy: #1b3b63;
     --dash-navy-icon: #2c567f;
     --dash-chart-line: #2f6fb5;
+    --sb-bg: #22384f;
+    --sb-text: #c7ced6;
+    --sb-active-bg: #57616d;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -41,13 +44,34 @@
   }
   header h1 { font-size: 1.1rem; margin: 0; display: flex; align-items: center; gap: 8px; }
   .badge { font-size: 0.65rem; font-weight: normal; padding: 2px 8px; border-radius: 10px; background: rgba(255,255,255,0.25); }
-  nav { display: flex; gap: 4px; }
-  nav button {
-    background: none; border: none; color: white; opacity: 0.75; padding: 8px 14px;
-    border-radius: 6px; cursor: pointer; font-size: 0.9rem;
+
+  /* ---- Sidebar (Reitersystem, nach CarCuro-Screenshot) ---- */
+  #appLayout { display: flex; align-items: stretch; min-height: calc(100vh - 60px); }
+  #sidebar { width: 250px; flex-shrink: 0; background: var(--sb-bg); padding: 10px 0; overflow-y: auto; }
+  .sb-item {
+    display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: none;
+    color: var(--sb-text); opacity: 0.85; padding: 10px 18px; cursor: pointer; font-size: 0.88rem;
+    text-align: left;
   }
-  nav button.active { opacity: 1; background: rgba(255,255,255,0.18); font-weight: 600; }
-  main { max-width: 1800px; margin: 0 auto; padding: 20px 32px; }
+  .sb-item:hover { opacity: 1; background: rgba(255,255,255,0.06); }
+  .sb-item.sb-active { opacity: 1; background: var(--sb-active-bg); color: #fff; font-weight: 600; }
+  .sb-icon { width: 20px; text-align: center; flex-shrink: 0; }
+  .sb-label { flex: 1; }
+  .sb-chevron { font-size: 0.8rem; opacity: 0.7; }
+  .sb-children { padding: 2px 0 6px 0; }
+  .sb-children.hidden { display: none; }
+  .sb-child {
+    display: block; width: 100%; background: none; border: none; color: var(--sb-text); opacity: 0.75;
+    padding: 7px 18px 7px 48px; cursor: pointer; font-size: 0.84rem; text-align: left;
+  }
+  .sb-child:hover { opacity: 1; background: rgba(255,255,255,0.06); }
+  .sb-child.sb-active { opacity: 1; color: #fff; font-weight: 600; }
+  .sb-divider { height: 1px; background: rgba(255,255,255,0.12); margin: 8px 18px; }
+  #appLayout > main { flex: 1; min-width: 0; padding: 24px 32px; }
+  @media (max-width: 800px) {
+    #appLayout { flex-direction: column; min-height: 0; }
+    #sidebar { width: 100%; }
+  }
   #gate { text-align: center; padding: 80px 20px; }
   #diagnose { font-size: 0.8rem; color: var(--text-dim); margin-top: 6px; }
   .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
@@ -105,6 +129,12 @@
   .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
   .hidden { display: none !important; }
   .empty { text-align: center; padding: 40px; color: var(--text-dim); }
+  #toast {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--dash-navy);
+    color: white; padding: 10px 18px; border-radius: 8px; font-size: 0.85rem; z-index: 200;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25); opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  #toast.show { opacity: 1; }
   .monthly-table td:first-child { text-transform: capitalize; }
   .subnav { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
   .subnav button {
@@ -162,24 +192,18 @@
 <body>
 
 <header>
-  <h1>Dado Automobile <span class="badge">v0.3</span></h1>
-  <nav id="mainNav" class="hidden">
-    <button data-view="dashboard" class="active">Dashboard</button>
-    <button data-view="bestand">Bestand</button>
-    <button data-view="rechnungen">Rechnungen</button>
-    <button data-view="auswertungen">Auswertungen</button>
-    <button data-view="ausgaben">Ausgaben</button>
-  </nav>
+  <h1>Dado Automobile <span class="badge">v0.4</span></h1>
 </header>
 
-<main>
-  <div id="gate">
-    <div id="diagnose"><span class="status-dot" id="statusDot"></span> <span id="statusText">Lädt…</span></div>
-    <br />
-    <button class="primary" id="loginBtn">Mit Google anmelden</button>
-  </div>
+<div id="gate">
+  <div id="diagnose"><span class="status-dot" id="statusDot"></span> <span id="statusText">Lädt…</span></div>
+  <br />
+  <button class="primary" id="loginBtn">Mit Google anmelden</button>
+</div>
 
-  <div id="app" class="hidden">
+<div id="appLayout" class="hidden">
+  <aside id="sidebar"></aside>
+  <main>
     <section id="view-dashboard">
       <div class="dash-grid">
         <div class="dash-menu">
@@ -315,10 +339,11 @@
         <p style="text-align:right; font-weight:600; margin-top:10px;">Summe: <span id="expenseSum">0 €</span></p>
       </div>
     </section>
-  </div>
-</main>
+  </main>
+</div>
 
 <div id="modalRoot"></div>
+<div id="toast"></div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
@@ -386,8 +411,7 @@
   const statusDot = document.getElementById("statusDot");
   const statusText = document.getElementById("statusText");
   const gate = document.getElementById("gate");
-  const appEl = document.getElementById("app");
-  const mainNav = document.getElementById("mainNav");
+  const appLayoutEl = document.getElementById("appLayout");
   const modalRoot = document.getElementById("modalRoot");
 
   function setStatus(ok, text) {
@@ -428,13 +452,21 @@
   // ---------- Navigation ----------
   function switchToView(view, subview) {
     currentView = view;
-    document.querySelectorAll("#mainNav button").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
-    document.querySelectorAll("main > div#app > section").forEach((s) => s.classList.add("hidden"));
+    document.querySelectorAll("#appLayout > main > section").forEach((s) => s.classList.add("hidden"));
     document.getElementById("view-" + view).classList.remove("hidden");
     if (view === "dashboard") renderDashboard();
     if (view === "auswertungen") renderAuswertungen();
     if (view === "rechnungen") { renderRechnungen(); renderKassabuch(); }
     if (view === "rechnungen" && subview) switchToSubview(subview);
+    renderSidebar();
+  }
+
+  function showToast(msg) {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => el.classList.remove("show"), 2200);
   }
 
   function switchToSubview(subview) {
@@ -444,11 +476,100 @@
     document.getElementById("subview-kassabuch").classList.toggle("hidden", subview !== "kassabuch");
   }
 
-  document.getElementById("mainNav").addEventListener("click", (e) => {
-    const btn = e.target.closest("button[data-view]");
-    if (!btn) return;
-    switchToView(btn.dataset.view);
-  });
+  // Sidebar-Navigation ("Reitersystem"), nachgebaut nach einem echten CarCuro-Screenshot
+  // (David, 2026-08-20). Module ohne `view`/`action` sind bei CarCuro vorhanden, bei uns
+  // noch nicht gebaut - Klick zeigt einen Hinweis statt stillschweigend nichts zu tun.
+  const SIDEBAR_ITEMS = [
+    { key: "dashboard", label: "Dashboard", icon: "📊", view: "dashboard" },
+    { key: "fahrzeuge", label: "Fahrzeuge", icon: "🚗", children: [
+      { label: "Bestand", view: "bestand" },
+      { label: "Auswertungen", view: "auswertungen" },
+      { label: "Einstellungen" },
+    ] },
+    { key: "auftraege", label: "Aufträge", icon: "📁" },
+    { key: "rechnungen", label: "Rechnungen", icon: "🧾", children: [
+      { label: "Neue Rechnung", action: "neueRechnung" },
+      { label: "Rechnungen", view: "rechnungen", subview: "rechnungsliste" },
+      { label: "Kassabuch", view: "rechnungen", subview: "kassabuch" },
+      { label: "Ausgaben", view: "ausgaben" },
+      { label: "Verwaltung" },
+    ] },
+    { key: "reservierung", label: "Reservierung", icon: "📅" },
+    { key: "kunden", label: "Kunden", icon: "👥" },
+    { key: "anfragen", label: "Anfragen", icon: "💬" },
+    { key: "socialmedia", label: "Social Media", icon: "📣", children: [{ label: "Posts" }] },
+    { key: "webseite", label: "Webseite", icon: "💻", children: [
+      { label: "Design" }, { label: "Inhalt/Seiten" }, { label: "Fahrzeugliste" },
+    ] },
+    { key: "tools", label: "Tools", icon: "🛠️", children: [
+      { label: "VIN-Abfrage" }, { label: "Bewertung" }, { label: "Fahrzeugberichte" },
+    ] },
+    { key: "vertraege", label: "Verträge", icon: "📄" },
+    { key: "__divider__" },
+    { key: "mitarbeiter", label: "Mitarbeiter", icon: "🧑" },
+    { key: "zugaenge", label: "Zugänge", icon: "🔑" },
+    { key: "profil", label: "Profil", icon: "👤" },
+  ];
+  const expandedGroups = new Set();
+
+  function sidebarChildActive(item) {
+    return Array.isArray(item.children) && item.children.some((c) => c.view && c.view === currentView && (!c.subview || c.subview === currentSubview));
+  }
+
+  function runSidebarLeaf(item) {
+    if (item.action === "neueRechnung") {
+      switchToView("rechnungen", "rechnungsliste");
+      openRechnungModal(null);
+    } else if (item.view) {
+      switchToView(item.view, item.subview);
+    } else {
+      showToast(`„${item.label}" ist noch nicht gebaut.`);
+    }
+  }
+
+  function renderSidebar() {
+    const el = document.getElementById("sidebar");
+    el.innerHTML = SIDEBAR_ITEMS.map((item) => {
+      if (item.key === "__divider__") return '<div class="sb-divider"></div>';
+      const hasChildren = Array.isArray(item.children);
+      const isExpanded = expandedGroups.has(item.key) || sidebarChildActive(item);
+      const isActive = hasChildren ? false : item.view === currentView;
+      return `
+        <button type="button" class="sb-item ${isActive ? "sb-active" : ""}" data-sb-key="${item.key}">
+          <span class="sb-icon">${item.icon}</span>
+          <span class="sb-label">${item.label}</span>
+          ${hasChildren ? `<span class="sb-chevron">${isExpanded ? "⌄" : "›"}</span>` : ""}
+        </button>
+        ${hasChildren ? `
+          <div class="sb-children ${isExpanded ? "" : "hidden"}">
+            ${item.children.map((c, i) => `
+              <button type="button" class="sb-child ${c.view && c.view === currentView && (!c.subview || c.subview === currentSubview) ? "sb-active" : ""}" data-sb-key="${item.key}" data-sb-child-index="${i}">
+                ${c.label}
+              </button>
+            `).join("")}
+          </div>
+        ` : ""}
+      `;
+    }).join("");
+
+    el.querySelectorAll(".sb-item").forEach((btn) => {
+      const item = SIDEBAR_ITEMS.find((i) => i.key === btn.dataset.sbKey);
+      btn.addEventListener("click", () => {
+        if (Array.isArray(item.children)) {
+          if (expandedGroups.has(item.key)) expandedGroups.delete(item.key); else expandedGroups.add(item.key);
+          renderSidebar();
+        } else {
+          runSidebarLeaf(item);
+        }
+      });
+    });
+
+    el.querySelectorAll(".sb-child").forEach((btn) => {
+      const item = SIDEBAR_ITEMS.find((i) => i.key === btn.dataset.sbKey);
+      const child = item.children[Number(btn.dataset.sbChildIndex)];
+      btn.addEventListener("click", () => runSidebarLeaf(child));
+    });
+  }
 
   document.getElementById("rechnungenSubnav").addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-subview]");
@@ -479,8 +600,7 @@
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
       gate.classList.remove("hidden");
-      appEl.classList.add("hidden");
-      mainNav.classList.add("hidden");
+      appLayoutEl.classList.add("hidden");
       if (unsubVehicles) unsubVehicles();
       if (unsubExpenses) unsubExpenses();
       if (unsubRechnungen) unsubRechnungen();
@@ -504,16 +624,15 @@
 
     if (!hasAccess) {
       gate.classList.remove("hidden");
-      appEl.classList.add("hidden");
-      mainNav.classList.add("hidden");
+      appLayoutEl.classList.add("hidden");
       setStatus(false, "Angemeldet als " + user.email + ", aber kein Zugriff auf diese App.");
       return;
     }
 
     gate.classList.add("hidden");
-    appEl.classList.remove("hidden");
-    mainNav.classList.remove("hidden");
+    appLayoutEl.classList.remove("hidden");
     setStatus(true, "Bereit.");
+    renderSidebar();
 
     if (unsubVehicles) unsubVehicles();
     if (unsubExpenses) unsubExpenses();

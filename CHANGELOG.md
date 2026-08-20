@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-08-20 (Fortsetzung 6)
+- App v0.4: Navigation von horizontaler Kopfleiste auf volle Sidebar (linke Seite, volle
+  Seitenhöhe) umgebaut, 1:1 nach echtem CarCuro-Sidebar-Screenshot — alle 14 Module in
+  gleicher Reihenfolge/Gruppierung, aufklappbare Untermenüs
+- Nur gebaute Module (Dashboard, Fahrzeuge, Rechnungen inkl. Unterpunkte) sind
+  funktionsfähig; alle anderen zeigen "noch nicht gebaut"-Hinweis statt stillem Nichtstun
+- Auswertungen/Ausgaben sind jetzt Unterpunkte von Fahrzeuge/Rechnungen statt eigener Reiter
+
 ## 2026-08-20 (Fortsetzung 5)
 - Seitenbreite von 1100px auf 1800px erweitert — App nutzt jetzt auf normalen Bildschirmen
   praktisch die volle Breite statt einer schmalen zentrierten Spalte (wie im
