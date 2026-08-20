@@ -2,7 +2,14 @@ const admin = require("firebase-admin");
 const Anthropic = require("@anthropic-ai/sdk");
 
 if (!admin.apps.length) {
-  admin.initializeApp({ projectId: "dado-automobile-ca04c" });
+  // verifyIdToken() braucht keine Credentials (prüft nur die Signatur gegen Googles
+  // öffentliche Zertifikate), aber admin.firestore() für den Rate-Limit-Zähler schon -
+  // deshalb hier ein echtes Service-Account-Zertifikat aus der Umgebungsvariable.
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    projectId: "dado-automobile-ca04c",
+  });
 }
 
 const MODEL = "claude-sonnet-5";
