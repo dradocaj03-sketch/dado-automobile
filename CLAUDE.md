@@ -31,8 +31,12 @@ Erkenntnisse aus den CarCuro-Screenshots liegen in `CARCURO_REFERENZ.md`.
   solange das so bleibt. Sobald weitere Personen Zugriff bekommen sollen: zuerst klären,
   wer was sehen darf, dann ggf. neues Projekt für die Trennung anlegen (siehe Betriebsanweisung).
 - **Nur David liefert aus** (Deploy-Rechte).
-- **Keine bezahlten Fremd-Dienste geplant** (Stand 2026-08-19). Sobald welche dazukommen:
-  Kostengrenzen einrichten, bevor der erste bezahlte Aufruf läuft.
+- **Bezahlte Fremd-Schnittstelle seit 2026-08-20: Anthropic API** (PDF-Rechnungserkennung,
+  siehe unten). Schlüssel liegt als Netlify-Umgebungsvariable `ANTHROPIC_API_KEY` (nie im
+  Code/Repo). **TODO prüfen:** Ausgabenlimit in der Anthropic Console gesetzt? (Regel 7 der
+  Betriebsanweisung verlangt das vor dem ersten Aufruf — Server-Rate-Limit ist bereits in
+  der Function eingebaut, aber ein Konto-weites Spend-Limit bei Anthropic selbst fehlt evtl.
+  noch.)
 
 ## Architektur
 
@@ -44,7 +48,8 @@ Erkenntnisse aus den CarCuro-Screenshots liegen in `CARCURO_REFERENZ.md`.
 | Daten | Firestore |
 | Rechte | Custom Claims im Token (`admin`, `apps`), gesteuert über `admins/{email}`-Sammlung |
 | Server-Logik | Firebase Cloud Functions (Rechte-Abgleich, ggf. Zeitpläne) |
-| Bezahlte APIs (falls später) | Nur über eigene Netlify-Functions, nie Schlüssel im Browser |
+| Bild-Upload | Firebase Storage (`fahrzeuge/{id}/foto.<ext>`) |
+| Bezahlte APIs | Nur über eigene Netlify-Functions (`netlify/functions/`), nie Schlüssel im Browser. Aktuell: `extract-invoice.js` (Anthropic API, PDF-Rechnungserkennung) — prüft Firebase-Auth-Token, begrenzt auf 20 Aufrufe/Stunde/Nutzer, feste Modellwahl (`claude-sonnet-5`), 8 MB Größenlimit |
 
 Firebase-Projekt-ID: `dado-automobile-ca04c`
 GitHub-Repo: `dado-automobile` (Account: dradocaj03-sketch) — **aktuell öffentlich
