@@ -111,6 +111,8 @@ dado-automobile/
       Standtagen), Auswertungen, Ausgaben, PDF-Rechnungserkennung (Anthropic API)
 - [x] v0.2: Reiter Rechnungen (mit Rechnungstyp Differenzbesteuerung/Regelbesteuerung,
       siehe `1-dado-automobile/NOTES.md`) + Kassabuch
+- [x] v0.3: Dashboard als neuer Standard-Startreiter, nach echtem CarCuro-Screenshot
+      nachgebaut (Details in `1-dado-automobile/NOTES.md`)
 - [ ] mobile.de-Seller-API-Anbindung — Plan in `MOBILE_DE_ANBINDUNG.md`, blockiert auf
       API-Zugangsdaten und Endpunkt-Doku von David
 - [ ] Weitere Ausbaustufen nach Bedarf (Verträge, Website-Baukasten, Kundenverwaltung

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-08-20 (Fortsetzung 4)
+- App v0.3: Dashboard als neuer Standard-Startreiter, nach echtem CarCuro-Screenshot
+  strukturell/farblich nachgebaut (Grid mit Schnellzugriffen, Neuigkeiten, zwei
+  Liniendiagrammen als Inline-SVG, „Kürzlich verkauft"/„Neu im Bestand"-Listen, vier
+  navyblaue Kennzahlen-Kacheln)
+- Bewusst nicht übernommen: CarCuros eigene Account-Kopfzeile (Logo/Kundennummer — für
+  Ein-Nutzer-App ohne Bedeutung) und der Wortlaut des Neuigkeiten-Feeds (Platzhalter statt
+  CarCuro-Produktwerbung)
+
 ## 2026-08-20 (Fortsetzung 3)
 - App v0.2: Reiter „Rechnungen" (mit Unterreitern Rechnungen/Kassabuch) hinzugefügt,
   Grundgerüst nach `CARCURO_REFERENZ.md`

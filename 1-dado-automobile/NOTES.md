@@ -1,7 +1,25 @@
 # Dado Automobile — App-Notizen
 
-**Version:** v0.2
+**Version:** v0.3
 **Live:** https://dado-automobile.netlify.app/ (Root leitet auf diese App um, siehe `_redirects`)
+
+## Umfang v0.3 (neu gegenüber v0.2)
+
+- **Dashboard** als neuer, standardmäßig aktiver erster Reiter — strukturell/farblich nach
+  echtem CarCuro-Screenshot (David, 2026-08-20) nachgebaut: 4 Schnellzugriffe (Mein
+  Bestand/Fahrzeug anlegen/Meine Rechnungen/Rechnung anlegen), Neuigkeiten-Karte,
+  Liniendiagramme „Verkaufte Autos" und „Profit pro Monat" (jeweils letzte 13 Monate,
+  eigenes leichtgewichtiges Inline-SVG statt Chart-Bibliothek), Listen „Kürzlich verkauft"
+  und „Neu im Bestand", vier navyblaue Kennzahlen-Kacheln (Im Bestand, VK-Wert,
+  Ø VK-Wert, Ø Standtage).
+  - **Zwei bewusste Abweichungen vom Original** (mit David abgestimmt): die CarCuro-eigene
+    Account-Kopfzeile (Logo/Hamburger-Menü/Kundennummer) wurde nicht übernommen — unsere
+    App hat schon eine eigene Kopfzeile und keine Mandanten-/Kundennummern-Logik. Die
+    „Neuigkeiten"-Karte zeigt aktuell statischen Platzhaltertext statt CarCuros eigenem
+    Produkt-News-Feed (der inhaltlich nicht auf unsere App übertragbar war) — offen, ob das
+    später an eine echte Quelle angebunden werden soll.
+  - Icons sind vereinfachte Emoji/Zeichen (🚗 ＋ 🧾 € ⇄), keine 1:1-SVG-Icons wie im Original
+    (keine Icon-Bibliothek eingebunden).
 
 ## Umfang v0.2 (neu gegenüber v0.1)
 
