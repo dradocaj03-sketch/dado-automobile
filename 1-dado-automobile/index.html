@@ -432,6 +432,14 @@
       <div class="modal-overlay">
         <div class="modal">
           <h2>${isEdit ? "Fahrzeugakte" : "Fahrzeug anlegen"}</h2>
+          <div class="card" style="margin-bottom:14px;padding:12px 14px;">
+            <label style="font-size:0.8rem;font-weight:600;">Rechnung/Kaufvertrag (PDF) — automatisch ausfüllen</label>
+            <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;align-items:center;">
+              <input type="file" id="invoicePdfInput" accept="application/pdf" />
+              <button type="button" class="secondary" id="extractInvoiceBtn">Automatisch ausfüllen</button>
+            </div>
+            <div id="extractStatus" style="font-size:0.8rem;color:var(--text-dim);margin-top:6px;"></div>
+          </div>
           <form id="vehicleForm">
             <div class="form-grid">
               ${stammdatenFields}
@@ -447,6 +455,54 @@
       </div>
     `;
     document.getElementById("cancelVehicleBtn").addEventListener("click", closeModal);
+
+    document.getElementById("extractInvoiceBtn").addEventListener("click", async () => {
+      const fileInput = document.getElementById("invoicePdfInput");
+      const statusEl = document.getElementById("extractStatus");
+      const file = fileInput.files[0];
+      if (!file) {
+        statusEl.textContent = "Bitte zuerst eine PDF-Datei auswählen.";
+        return;
+      }
+      statusEl.textContent = "Lese Rechnung … (das kann einige Sekunden dauern)";
+      try {
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(",")[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const idToken = await auth.currentUser.getIdToken();
+        const resp = await fetch("/.netlify/functions/extract-invoice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + idToken },
+          body: JSON.stringify({ pdfBase64: base64 }),
+        });
+        const result = await resp.json();
+        if (!resp.ok) {
+          statusEl.textContent = "Fehler: " + (result.error || resp.statusText);
+          return;
+        }
+        const data = result.data || {};
+        const form = document.getElementById("vehicleForm");
+        const setIfPresent = (name, value) => {
+          const el = form.elements[name];
+          if (el && value !== null && value !== undefined && value !== "") el.value = value;
+        };
+        setIfPresent("marke", data.marke);
+        setIfPresent("modell", data.modell);
+        setIfPresent("variante", data.variante);
+        setIfPresent("fin", data.fin);
+        setIfPresent("km", data.km);
+        setIfPresent("ez", data.ez);
+        setIfPresent("ekPreis", data.ekPreis);
+        setIfPresent("ekDatum", data.ekDatum);
+        statusEl.textContent = "Felder ausgefüllt — bitte prüfen und ggf. korrigieren, bevor du speicherst.";
+      } catch (e) {
+        statusEl.textContent = "Fehler: " + e.message;
+      }
+    });
+
     if (isEdit) {
       document.getElementById("deleteVehicleBtn").addEventListener("click", async () => {
         if (confirm("Dieses Fahrzeug wirklich löschen?")) {

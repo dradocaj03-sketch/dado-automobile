@@ -1,0 +1,9 @@
+{
+  "name": "dado-automobile-site",
+  "private": true,
+  "description": "Abhaengigkeiten fuer Netlify Functions (Vorschaltungen vor bezahlten Diensten)",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0",
+    "firebase-admin": "^12.7.0"
+  }
+}
