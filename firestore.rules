@@ -1,0 +1,25 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+    function hasApp(app) {
+      return request.auth != null
+        && 'apps' in request.auth.token
+        && app in request.auth.token.apps;
+    }
+
+    // Quelle der Wahrheit für Rechte. Nur Admins dürfen lesen/schreiben -
+    // Vergabe läuft ausschließlich über das Verwaltungs-Panel.
+    match /admins/{email} {
+      allow read, write: if isAdmin();
+    }
+
+    // Alles andere: geschlossen, bis die erste App ihre Collections braucht.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
