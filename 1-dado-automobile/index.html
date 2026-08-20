@@ -220,6 +220,15 @@
     "Miete", "Software", "Fortbildung", "Sonstiges",
   ];
 
+  const DOCUMENT_CATEGORIES = [
+    "Fahrzeugdokumente (ZB I, ZB II, HU, Scheckheft)",
+    "Rechnung – Transport",
+    "Rechnung – Werkstatt",
+    "Rechnung – TÜV",
+    "Einkaufsrechnung",
+    "Verkaufsrechnung",
+  ];
+
   let vehicles = [];
   let expenses = [];
   let currentView = "bestand";
@@ -415,14 +424,21 @@
     `;
 
     const dokumente = v.dokumente || [];
-    const dokumenteListHtml = dokumente.length
-      ? dokumente.map((d, i) => `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:0.85rem;">
-            <a href="${d.url}" target="_blank" rel="noopener">${d.name}</a>
-            <button type="button" class="danger" style="padding:2px 8px;" data-doc-index="${i}">Entfernen</button>
-          </div>
-        `).join("")
-      : '<p style="color:var(--text-dim);font-size:0.85rem;">Noch keine Dokumente gespeichert.</p>';
+    const docRow = (d) => {
+      const i = dokumente.indexOf(d);
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0 3px 10px;font-size:0.85rem;">
+          <a href="${d.url}" target="_blank" rel="noopener">${d.name}</a>
+          <button type="button" class="danger" style="padding:2px 8px;" data-doc-index="${i}">Entfernen</button>
+        </div>
+      `;
+    };
+    const alleKategorien = [...DOCUMENT_CATEGORIES, "Sonstiges"];
+    const dokumenteListHtml = alleKategorien.map((kat) => {
+      const docsInKat = dokumente.filter((d) => (d.kategorie || "Sonstiges") === kat);
+      if (docsInKat.length === 0) return "";
+      return `<div style="margin-bottom:8px;"><strong style="font-size:0.8rem;">${kat}</strong>${docsInKat.map(docRow).join("")}</div>`;
+    }).join("") || '<p style="color:var(--text-dim);font-size:0.85rem;">Noch keine Dokumente gespeichert.</p>';
 
     // Buchhaltungs-/Auswertungsdaten stehen nur in der Fahrzeugakte (beim Bearbeiten),
     // nicht beim schnellen Anlegen eines neuen Fahrzeugs.
@@ -447,12 +463,15 @@
         <div class="modal">
           <h2>${isEdit ? "Fahrzeugakte" : "Fahrzeug anlegen"}</h2>
           <div class="card" style="margin-bottom:14px;padding:12px 14px;">
-            <label style="font-size:0.8rem;font-weight:600;">Rechnung/Kaufvertrag (PDF) — automatisch ausfüllen</label>
+            <label style="font-size:0.8rem;font-weight:600;">Dokument hochladen (PDF)</label>
             <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;align-items:center;">
               <input type="file" id="invoicePdfInput" accept="application/pdf" />
+              <select id="invoiceDocCategory">
+                ${DOCUMENT_CATEGORIES.map((k) => `<option value="${k}">${k}</option>`).join("")}
+              </select>
               <button type="button" class="secondary" id="extractInvoiceBtn">Automatisch ausfüllen</button>
             </div>
-            <div id="extractStatus" style="font-size:0.8rem;color:var(--text-dim);margin-top:6px;"></div>
+            <div id="extractStatus" style="font-size:0.8rem;color:var(--text-dim);margin-top:6px;">Die Datei wird beim Speichern in der gewählten Kategorie in der Fahrzeugakte abgelegt. „Automatisch ausfüllen" ist optional (nutzt KI, um Felder aus Rechnungen vorauszufüllen).</div>
           </div>
           <form id="vehicleForm">
             <div class="form-grid">
@@ -572,12 +591,13 @@
       // (unabhängig davon, ob "Automatisch ausfüllen" genutzt wurde).
       const docFile = document.getElementById("invoicePdfInput").files[0];
       if (docFile && docFile.size > 0) {
+        const kategorie = document.getElementById("invoiceDocCategory").value;
         const safeName = docFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const path = `fahrzeuge/${targetRef.id}/dokumente/${Date.now()}_${safeName}`;
         const docStorageRef = ref(storage, path);
         await uploadBytes(docStorageRef, docFile);
         const docUrl = await getDownloadURL(docStorageRef);
-        data.dokumente = arrayUnion({ name: docFile.name, url: docUrl, uploadedAt: new Date().toISOString() });
+        data.dokumente = arrayUnion({ name: docFile.name, url: docUrl, uploadedAt: new Date().toISOString(), kategorie });
       }
 
       // Fahrzeugakte-Felder (Buchhaltung/Auswertung) gibt es nur im Bearbeiten-Formular.
