@@ -15,9 +15,14 @@ Vor dem Planen des Datenmodells der ersten App lesen.
 ## Was das ist
 
 Interne Web-Apps für den Autohandel **Dado Automobile (Inh. David Radocaj)**, betrieben
-und genutzt ausschließlich von David selbst. Erste App heißt **CarCuro** — All-in-One-
-Übersicht für Buchhaltung, Analysen, monatliche Zusammenfassung von Einkauf/Verkauf/
-Gewinn/Margen/Ausgaben. Details folgen nach Sichtung von Referenz-Screenshots ("Kakuho"-App).
+und genutzt ausschließlich von David selbst. Erste App heißt **„Dado Automobile"** (nach
+der Firma benannt) — All-in-One-Übersicht für Buchhaltung, Analysen, monatliche
+Zusammenfassung von Einkauf/Verkauf/Gewinn/Margen/Ausgaben.
+
+**Wichtig zur Namensklärung (2026-08-20):** „CarCuro" (app.carcuro.com) ist ein
+bestehendes Drittanbieter-SaaS für Autohändler, das David aktuell nutzt/testet — das war
+die Quelle der Referenz-Screenshots, NICHT der Name unserer eigenen App. Strukturelle
+Erkenntnisse aus den CarCuro-Screenshots liegen in `CARCURO_REFERENZ.md`.
 
 ## Kontext / Vertrauensgrenze
 
@@ -58,7 +63,7 @@ dado-automobile/
 ├── firestore.rules
 ├── firestore.indexes.json
 ├── functions/              ← zentrale Rechteverwaltung (admins-Abgleich)
-└── 1-carcuro/               ← erste App: CarCuro
+└── 1-dado-automobile/       ← erste App: "Dado Automobile" (Verwaltungssoftware)
     ├── index.html
     ├── NOTES.md            ← Version, Live-Adresse, Stand dieser App
     └── netlify/functions/  ← Vorschaltungen für bezahlte Dienste (falls nötig)
@@ -95,7 +100,9 @@ dado-automobile/
       getestet unter /admin/, David als erster Super-Admin bootstrappt
 - [x] Firestore-Regeln (admins/ nur für Admins, alles andere geschlossen)
 - [x] Netlify-Seite verbunden (dado-automobile.netlify.app, Auto-Deploy bei Push auf main)
-- [ ] Erste App **CarCuro** (wartet auf Kakuho-Screenshots zur Funktionsklärung — geplanter
+- [x] Referenz-Screenshots (CarCuro SaaS) + Businessplan gesichtet, siehe
+      `CARCURO_REFERENZ.md` und `GESCHAEFTSKONTEXT.md`
+- [ ] Erste App **„Dado Automobile"** (Datenmodell/Feature-Umfang planen — geplanter
       Umfang: Buchhaltung, Analysen, monatliche Übersicht Einkauf/Verkauf/Gewinn/Margen/
       Ausgaben)
 
