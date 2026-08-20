@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-08-20 (Fortsetzung 5)
+- Seitenbreite von 1100px auf 1800px erweitert — App nutzt jetzt auf normalen Bildschirmen
+  praktisch die volle Breite statt einer schmalen zentrierten Spalte (wie im
+  CarCuro-Screenshot)
+
 ## 2026-08-20 (Fortsetzung 4)
 - App v0.3: Dashboard als neuer Standard-Startreiter, nach echtem CarCuro-Screenshot
   strukturell/farblich nachgebaut (Grid mit Schnellzugriffen, Neuigkeiten, zwei

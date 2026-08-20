@@ -3,6 +3,13 @@
 **Version:** v0.3
 **Live:** https://dado-automobile.netlify.app/ (Root leitet auf diese App um, siehe `_redirects`)
 
+## Layout
+
+Seitenbreite (`main`) auf `max-width: 1800px` erweitert (vorher 1100px) — die App nutzt
+damit auf normalen Bildschirmen praktisch die volle Breite, wie im CarCuro-Screenshot,
+statt in einer schmalen Spalte zu zentrieren. Auf sehr breiten Monitoren (Ultrawide) bleibt
+noch etwas Rand, damit Tabellen/Text nicht unlesbar auseinandergezogen werden.
+
 ## Umfang v0.3 (neu gegenüber v0.2)
 
 - **Dashboard** als neuer, standardmäßig aktiver erster Reiter — strukturell/farblich nach
