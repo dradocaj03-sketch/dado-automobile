@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-08-20 (Fortsetzung 2)
+- PDF-Rechnungserkennung erfolgreich live getestet
+- Vorfall: Service-Account-Schlüssel einmal versehentlich per CLI-Ausgabe offengelegt,
+  sofort widerrufen und ersetzt; Schlüssel wird jetzt base64-kodiert hinterlegt
+  (robuster gegen Copy-Paste-Beschädigung, siehe CLAUDE.md „Vorfälle")
+
 ## 2026-08-20 (Fortsetzung)
 - Erste App "Dado Automobile" gebaut: Fahrzeugbestand, Auswertungen, Ausgaben (v0.1)
 - App-Name korrigiert: "Dado Automobile" statt versehentlich "CarCuro" (CarCuro ist nur

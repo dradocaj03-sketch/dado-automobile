@@ -107,11 +107,25 @@ dado-automobile/
 - [x] Netlify-Seite verbunden (dado-automobile.netlify.app, Auto-Deploy bei Push auf main)
 - [x] Referenz-Screenshots (CarCuro SaaS) + Businessplan gesichtet, siehe
       `CARCURO_REFERENZ.md` und `GESCHAEFTSKONTEXT.md`
-- [ ] Erste App **„Dado Automobile"** (Datenmodell/Feature-Umfang planen — geplanter
-      Umfang: Buchhaltung, Analysen, monatliche Übersicht Einkauf/Verkauf/Gewinn/Margen/
-      Ausgaben)
+- [x] Erste App **„Dado Automobile"** v0.1 live: Fahrzeugbestand (mit Bild, VIN, editierbaren
+      Standtagen), Auswertungen, Ausgaben, PDF-Rechnungserkennung (Anthropic API)
+- [ ] Weitere Ausbaustufen nach Bedarf (Rechnungen/Kassabuch, Verträge, Website-Baukasten
+      — siehe `CARCURO_REFERENZ.md`)
 
 ## Offene Punkte / Vorfälle
+
+- **Service-Account-Schlüssel wurde einmal versehentlich im Klartext offengelegt
+  (2026-08-20).** Beim ersten Versuch, den Firebase-Admin-Schlüssel per
+  `netlify env:set` über die Kommandozeile zu setzen, hat die CLI den vollen Inhalt
+  (inkl. privatem Schlüssel) in ihrer Bestätigungsmeldung ausgegeben — dadurch im
+  Gesprächsverlauf sichtbar geworden. Sofort widerrufen (Schlüssel in Google Cloud IAM
+  gelöscht) und durch einen neuen ersetzt. **Lehre:** Secrets nie per CLI-Kommando setzen,
+  dessen Ausgabe man nicht vorher kennt — entweder über die Web-UI direkt einfügen lassen,
+  oder Shell-Ausgabe explizit nach `/dev/null` umleiten. Zusätzliche Lehre: rohes
+  Mehrzeilen-JSON in Web-UI-Textfeldern (v. a. nach Kopieren aus TextEdit) kann durch
+  automatische Zeichenersetzung beschädigt werden — deshalb wird der Service-Account-
+  Schlüssel jetzt **base64-kodiert** als `FIREBASE_SERVICE_ACCOUNT_JSON_B64` hinterlegt
+  und in der Function wieder dekodiert.
 
 - **Repo ist aktuell öffentlich.** Grund: Zwei GitHub-Konten (`dradocaj03-sketch`, Besitzer
   des Repos, und versehentlich `dadoautomobile-max`, entstanden durch Google-Login-Verwechslung
