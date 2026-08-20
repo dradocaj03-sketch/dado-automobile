@@ -34,8 +34,12 @@ Ausgaben — Details folgen nach Sichtung von Referenz-Screenshots ("Kakuho"-App
 | Server-Logik | Firebase Cloud Functions (Rechte-Abgleich, ggf. Zeitpläne) |
 | Bezahlte APIs (falls später) | Nur über eigene Netlify-Functions, nie Schlüssel im Browser |
 
-Firebase-Projekt-ID: `dado-automobile`
-GitHub-Repo: `dado-automobile` (Account: dradocaj03-sketch)
+Firebase-Projekt-ID: `dado-automobile-ca04c`
+GitHub-Repo: `dado-automobile` (Account: dradocaj03-sketch) — **aktuell öffentlich
+(temporär, wegen Netlify-Kontributoren-Problem, siehe Vorfälle unten). Muss vor
+Produktivbetrieb mit echten Geschäftsdaten wieder auf privat gestellt werden.**
+Netlify-Seite: dado-automobile.netlify.app (Team: dadoautomobile's team)
+Web-App-ID: `1:163470074312:web:b69cf5e92c93e94f5820fd`
 
 ## Ordnerstruktur
 
@@ -75,16 +79,34 @@ dado-automobile/
     Änderung der bestehenden Datei, Regeln lockern um ein Problem zu umgehen, Funktionieren
     behaupten ohne Ausführung.
 
-## Aktueller Stand (2026-08-19)
+## Aktueller Stand (2026-08-20)
 
 - [x] Repo initialisiert
-- [ ] GitHub-Repo verbunden
-- [ ] Firebase-Projekt angelegt (Auth + Firestore)
-- [ ] Rechteverwaltung (admins/-Sammlung, Login-Abgleich-Function, Verwaltungs-Panel)
-- [ ] Firestore-Regeln
-- [ ] Netlify-Seite verbunden
-- [ ] Erste App (wartet auf Kakuho-Screenshots zur Funktionsklärung)
+- [x] GitHub-Repo verbunden (aktuell öffentlich, siehe Vorfälle)
+- [x] Firebase-Projekt angelegt (Auth + Firestore, Blaze-Tarif, Budget-Warnung 20€/Monat)
+- [x] Rechteverwaltung (admins/-Sammlung, Login-Abgleich-Function, Verwaltungs-Panel) — live
+      getestet unter /admin/, David als erster Super-Admin bootstrappt
+- [x] Firestore-Regeln (admins/ nur für Admins, alles andere geschlossen)
+- [x] Netlify-Seite verbunden (dado-automobile.netlify.app, Auto-Deploy bei Push auf main)
+- [ ] Erste App (wartet auf Kakuho-Screenshots zur Funktionsklärung — geplanter Umfang:
+      Buchhaltung, Analysen, monatliche Übersicht Einkauf/Verkauf/Gewinn/Margen/Ausgaben)
 
 ## Offene Punkte / Vorfälle
 
-_Noch keine — wird bei Bedarf ergänzt._
+- **Repo ist aktuell öffentlich.** Grund: Zwei GitHub-Konten (`dradocaj03-sketch`, Besitzer
+  des Repos, und versehentlich `dadoautomobile-max`, entstanden durch Google-Login-Verwechslung
+  über zwei parallel genutzte Google-Konten/Arc-Profile) führten dazu, dass Netlifys
+  „Unrecognized Git contributor"-Schutz (Free-Plan, nur verifizierte Mitwirkende bei privaten
+  Repos) Builds blockierte. Öffentlich gestellt, um das zu umgehen, mit Davids ausdrücklicher
+  Zustimmung. **TODO: Vor Produktivbetrieb mit echten Geschäftsdaten (Kaufverträge, Zahlen)
+  wieder auf privat stellen** — dazu muss David dauerhaft als `dradocaj03-sketch` bei GitHub
+  angemeldet bleiben (Netlify Git-Contributor-Verbindung ist jetzt korrekt auf dieses Konto
+  eingerichtet), dann kann die Sichtbarkeit ohne erneuten Build-Block zurückgestellt werden.
+- **Zwei GitHub-Konten existieren.** `dradocaj03-sketch` ist das aktive/richtige Konto
+  (besitzt das Repo, Passwort wurde am 2026-08-20 neu gesetzt). `dadoautomobile-max` ist ein
+  Versehen und wird nicht verwendet — kann bei Gelegenheit gelöscht werden.
+- **Google-Cloud-Konto brauchte ungewöhnlich lange Freischaltungszeiten** bei fast jedem
+  Schritt (GCP-Nutzungsbedingungen, Firebase-Projekt-Erstellung per CLI schlug dauerhaft mit
+  403 fehl trotz Owner-Rolle — Workaround: Projekt komplett über die Firebase-Konsole neu
+  anlegen statt per CLI mit bestehendem GCP-Projekt verknüpfen). Funktionierender Weg ist
+  dokumentiert, falls ein weiteres Firebase-Projekt für dieses Konto nötig wird.
