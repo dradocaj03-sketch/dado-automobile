@@ -123,7 +123,7 @@
     <section id="view-bestand">
       <div class="toolbar">
         <h2 style="margin:0;">Fahrzeugbestand</h2>
-        <button class="primary" id="addVehicleBtn">+ Fahrzeug hinzufügen</button>
+        <button class="primary" id="addVehicleBtn">+ Fahrzeug anlegen</button>
       </div>
       <div class="card" style="overflow-x:auto;">
         <table>
@@ -385,33 +385,45 @@
 
   function openVehicleModal(vehicle) {
     const isEdit = !!vehicle;
-    const v = vehicle || { status: "bestand", ekDatum: new Date().toISOString().slice(0, 10) };
+    const v = vehicle || { status: "bestand" };
+
+    const stammdatenFields = `
+      <div class="field"><label>Marke</label><input name="marke" value="${v.marke || ""}" required /></div>
+      <div class="field"><label>Modell</label><input name="modell" value="${v.modell || ""}" required /></div>
+      <div class="field full"><label>Ausstattung/Variante (optional)</label><input name="variante" value="${v.variante || ""}" /></div>
+      <div class="field full"><label>Fahrgestellnummer VIN</label><input name="fin" value="${v.fin || ""}" placeholder="17-stellig" maxlength="17" style="text-transform:uppercase;" /></div>
+      <div class="field"><label>Erstzulassung</label><input name="ez" type="date" value="${v.ez || ""}" /></div>
+      <div class="field"><label>Kilometerstand</label><input name="km" type="number" value="${v.km || ""}" /></div>
+      <div class="field"><label>Status</label>
+        <select name="status">
+          <option value="bestand" ${v.status === "bestand" ? "selected" : ""}>Im Bestand</option>
+          <option value="reserviert" ${v.status === "reserviert" ? "selected" : ""}>Reserviert</option>
+          <option value="verkauft" ${v.status === "verkauft" ? "selected" : ""}>Verkauft</option>
+        </select>
+      </div>
+    `;
+
+    // Buchhaltungs-/Auswertungsdaten stehen nur in der Fahrzeugakte (beim Bearbeiten),
+    // nicht beim schnellen Anlegen eines neuen Fahrzeugs.
+    const fahrzeugakteFields = `
+      <h3 class="full" style="grid-column:1/-1;margin:6px 0 0 0;padding-top:10px;border-top:1px solid var(--border);">Fahrzeugakte — Buchhaltung &amp; Auswertung</h3>
+      <div class="field"><label>EK-Preis (€)</label><input name="ekPreis" type="number" step="0.01" value="${v.ekPreis ?? ""}" /></div>
+      <div class="field"><label>EK-Datum</label><input name="ekDatum" type="date" value="${v.ekDatum || ""}" /></div>
+      <div class="field"><label>Weitere Kosten (€)</label><input name="kosten" type="number" step="0.01" value="${v.kosten ?? 0}" /></div>
+      <div class="field"><label>Angebotspreis (€)</label><input name="angebotspreis" type="number" step="0.01" value="${v.angebotspreis ?? ""}" /></div>
+      <div class="field"><label>Verkaufspreis (€, falls verkauft)</label><input name="verkaufspreis" type="number" step="0.01" value="${v.verkaufspreis ?? ""}" /></div>
+      <div class="field"><label>VK-Datum (falls verkauft)</label><input name="vkDatum" type="date" value="${v.vkDatum || ""}" /></div>
+      <div class="field full"><label>Notizen</label><textarea name="notizen" rows="2">${v.notizen || ""}</textarea></div>
+    `;
+
     modalRoot.innerHTML = `
       <div class="modal-overlay">
         <div class="modal">
-          <h2>${isEdit ? "Fahrzeug bearbeiten" : "Fahrzeug hinzufügen"}</h2>
+          <h2>${isEdit ? "Fahrzeugakte" : "Fahrzeug anlegen"}</h2>
           <form id="vehicleForm">
             <div class="form-grid">
-              <div class="field"><label>Marke</label><input name="marke" value="${v.marke || ""}" required /></div>
-              <div class="field"><label>Modell</label><input name="modell" value="${v.modell || ""}" required /></div>
-              <div class="field full"><label>Ausstattung/Variante (optional)</label><input name="variante" value="${v.variante || ""}" /></div>
-              <div class="field full"><label>Fahrgestellnummer VIN</label><input name="fin" value="${v.fin || ""}" placeholder="17-stellig" maxlength="17" style="text-transform:uppercase;" /></div>
-              <div class="field"><label>Erstzulassung</label><input name="ez" type="date" value="${v.ez || ""}" /></div>
-              <div class="field"><label>Kilometerstand</label><input name="km" type="number" value="${v.km || ""}" /></div>
-              <div class="field"><label>Status</label>
-                <select name="status">
-                  <option value="bestand" ${v.status === "bestand" ? "selected" : ""}>Im Bestand</option>
-                  <option value="reserviert" ${v.status === "reserviert" ? "selected" : ""}>Reserviert</option>
-                  <option value="verkauft" ${v.status === "verkauft" ? "selected" : ""}>Verkauft</option>
-                </select>
-              </div>
-              <div class="field"><label>EK-Preis (€)</label><input name="ekPreis" type="number" step="0.01" value="${v.ekPreis ?? ""}" required /></div>
-              <div class="field"><label>EK-Datum</label><input name="ekDatum" type="date" value="${v.ekDatum || ""}" required /></div>
-              <div class="field"><label>Weitere Kosten (€)</label><input name="kosten" type="number" step="0.01" value="${v.kosten ?? 0}" /></div>
-              <div class="field"><label>Angebotspreis (€)</label><input name="angebotspreis" type="number" step="0.01" value="${v.angebotspreis ?? ""}" /></div>
-              <div class="field"><label>Verkaufspreis (€, falls verkauft)</label><input name="verkaufspreis" type="number" step="0.01" value="${v.verkaufspreis ?? ""}" /></div>
-              <div class="field"><label>VK-Datum (falls verkauft)</label><input name="vkDatum" type="date" value="${v.vkDatum || ""}" /></div>
-              <div class="field full"><label>Notizen</label><textarea name="notizen" rows="2">${v.notizen || ""}</textarea></div>
+              ${stammdatenFields}
+              ${isEdit ? fahrzeugakteFields : ""}
             </div>
             <div class="modal-actions">
               ${isEdit ? '<button type="button" class="danger" id="deleteVehicleBtn">Löschen</button>' : ""}
@@ -442,19 +454,23 @@
         ez: fd.get("ez").trim(),
         km: Number(fd.get("km")) || 0,
         status: fd.get("status"),
-        ekPreis: Number(fd.get("ekPreis")) || 0,
-        ekDatum: fd.get("ekDatum"),
-        kosten: Number(fd.get("kosten")) || 0,
-        angebotspreis: fd.get("angebotspreis") ? Number(fd.get("angebotspreis")) : null,
-        verkaufspreis: fd.get("verkaufspreis") ? Number(fd.get("verkaufspreis")) : null,
-        vkDatum: fd.get("vkDatum") || null,
-        notizen: fd.get("notizen").trim(),
         updatedAt: serverTimestamp(),
         updatedBy: auth.currentUser.email,
       };
+      // Fahrzeugakte-Felder (Buchhaltung/Auswertung) gibt es nur im Bearbeiten-Formular.
       if (isEdit) {
+        data.ekPreis = Number(fd.get("ekPreis")) || 0;
+        data.ekDatum = fd.get("ekDatum") || null;
+        data.kosten = Number(fd.get("kosten")) || 0;
+        data.angebotspreis = fd.get("angebotspreis") ? Number(fd.get("angebotspreis")) : null;
+        data.verkaufspreis = fd.get("verkaufspreis") ? Number(fd.get("verkaufspreis")) : null;
+        data.vkDatum = fd.get("vkDatum") || null;
+        data.notizen = fd.get("notizen").trim();
         await setDoc(doc(db, "fahrzeuge", v.id), data, { merge: true });
       } else {
+        data.ekPreis = 0; data.ekDatum = null; data.kosten = 0;
+        data.angebotspreis = null; data.verkaufspreis = null; data.vkDatum = null;
+        data.notizen = "";
         data.nr = await nextVehicleNr();
         data.createdAt = serverTimestamp();
         data.createdBy = auth.currentUser.email;
