@@ -68,6 +68,8 @@
   .profit-pos { color: var(--green); font-weight: 600; }
   .profit-neg { color: var(--red); font-weight: 600; }
   .status-pill { font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .thumb { width: 56px; height: 40px; object-fit: cover; border-radius: 6px; background: var(--bg-page); border: 1px solid var(--border); display: block; }
+  .thumb-placeholder { width: 56px; height: 40px; border-radius: 6px; background: var(--bg-page); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 1.1rem; }
   .status-bestand { background: #dbeafe; color: #1e40af; }
   .status-reserviert { background: #fef3c7; color: #92400e; }
   .status-verkauft { background: #dcfce7; color: #166534; }
@@ -128,7 +130,7 @@
       <div class="card" style="overflow-x:auto;">
         <table>
           <thead><tr>
-            <th>Nr.</th><th>Fahrzeug</th><th>Status</th><th>Standtage</th>
+            <th></th><th>Nr.</th><th>Fahrzeug</th><th>Status</th><th>Standtage</th>
             <th>Preis</th><th>EZ</th><th>KM</th><th></th>
           </tr></thead>
           <tbody id="vehicleTableBody"></tbody>
@@ -191,6 +193,9 @@
   import {
     getFunctions, httpsCallable,
   } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js";
+  import {
+    getStorage, ref, uploadBytes, getDownloadURL,
+  } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js";
 
   const firebaseConfig = {
     projectId: "dado-automobile-ca04c",
@@ -206,6 +211,7 @@
   const db = getFirestore(fbApp);
   const functions = getFunctions(fbApp);
   const claimSelfFromAdmins = httpsCallable(functions, "claimSelfFromAdmins");
+  const storage = getStorage(fbApp);
 
   const EXPENSE_CATEGORIES = [
     "Werbung (Mobile.de/Kleinanzeigen)", "Kraftstoff", "Handy", "Werkzeuge",
@@ -249,6 +255,7 @@
   }
 
   function standtage(v) {
+    if (v.standtageManual !== null && v.standtageManual !== undefined) return v.standtageManual;
     if (!v.ekDatum) return null;
     const end = v.vkDatum || new Date().toISOString().slice(0, 10);
     return daysBetween(v.ekDatum, end);
@@ -348,6 +355,7 @@
       const preisAnzeige = v.status === "verkauft" ? v.verkaufspreis : v.angebotspreis;
       const tr = document.createElement("tr");
       tr.innerHTML = `
+        <td>${v.bildUrl ? `<img class="thumb" src="${v.bildUrl}" alt="" />` : '<div class="thumb-placeholder">🚗</div>'}</td>
         <td>${v.nr ?? "-"}</td>
         <td>${v.marke || ""} ${v.modell || ""}<br><span style="color:var(--text-dim);font-size:0.78rem;">${v.variante || ""}</span></td>
         <td><span class="status-pill status-${v.status}">${statusLabel(v.status)}</span></td>
@@ -386,6 +394,11 @@
     const v = vehicle || { status: "bestand" };
 
     const stammdatenFields = `
+      <div class="field full">
+        <label>Bild</label>
+        ${v.bildUrl ? `<img class="thumb" style="width:120px;height:86px;margin-bottom:6px;" src="${v.bildUrl}" alt="" />` : ""}
+        <input name="bild" type="file" accept="image/*" />
+      </div>
       <div class="field"><label>Marke</label><input name="marke" value="${v.marke || ""}" required /></div>
       <div class="field"><label>Modell</label><input name="modell" value="${v.modell || ""}" required /></div>
       <div class="field full"><label>Ausstattung/Variante (optional)</label><input name="variante" value="${v.variante || ""}" /></div>
@@ -407,6 +420,7 @@
       <h3 class="full" style="grid-column:1/-1;margin:6px 0 0 0;padding-top:10px;border-top:1px solid var(--border);">Fahrzeugakte — Buchhaltung &amp; Auswertung</h3>
       <div class="field"><label>EK-Preis (€)</label><input name="ekPreis" type="number" step="0.01" value="${v.ekPreis ?? ""}" /></div>
       <div class="field"><label>EK-Datum</label><input name="ekDatum" type="date" value="${v.ekDatum || ""}" /></div>
+      <div class="field"><label>Standtage (überschreiben, optional)</label><input name="standtageManual" type="number" min="0" value="${v.standtageManual ?? ""}" placeholder="leer = automatisch aus EK-/VK-Datum" /></div>
       <div class="field"><label>Weitere Kosten (€)</label><input name="kosten" type="number" step="0.01" value="${v.kosten ?? 0}" /></div>
       <div class="field"><label>Angebotspreis (€)</label><input name="angebotspreis" type="number" step="0.01" value="${v.angebotspreis ?? ""}" /></div>
       <div class="field"><label>Verkaufspreis (€, falls verkauft)</label><input name="verkaufspreis" type="number" step="0.01" value="${v.verkaufspreis ?? ""}" /></div>
@@ -443,7 +457,13 @@
     }
     document.getElementById("vehicleForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Speichert…";
+
       const fd = new FormData(e.target);
+      const targetRef = isEdit ? doc(db, "fahrzeuge", v.id) : doc(collection(db, "fahrzeuge"));
+
       const data = {
         marke: fd.get("marke").trim(),
         modell: fd.get("modell").trim(),
@@ -455,6 +475,15 @@
         updatedAt: serverTimestamp(),
         updatedBy: auth.currentUser.email,
       };
+
+      const bildFile = fd.get("bild");
+      if (bildFile && bildFile.size > 0) {
+        const ext = (bildFile.name.split(".").pop() || "jpg").toLowerCase();
+        const storageRef = ref(storage, `fahrzeuge/${targetRef.id}/foto.${ext}`);
+        await uploadBytes(storageRef, bildFile);
+        data.bildUrl = await getDownloadURL(storageRef);
+      }
+
       // Fahrzeugakte-Felder (Buchhaltung/Auswertung) gibt es nur im Bearbeiten-Formular.
       if (isEdit) {
         data.ekPreis = Number(fd.get("ekPreis")) || 0;
@@ -463,16 +492,18 @@
         data.angebotspreis = fd.get("angebotspreis") ? Number(fd.get("angebotspreis")) : null;
         data.verkaufspreis = fd.get("verkaufspreis") ? Number(fd.get("verkaufspreis")) : null;
         data.vkDatum = fd.get("vkDatum") || null;
+        data.standtageManual = fd.get("standtageManual") ? Number(fd.get("standtageManual")) : null;
         data.notizen = fd.get("notizen").trim();
-        await setDoc(doc(db, "fahrzeuge", v.id), data, { merge: true });
+        await setDoc(targetRef, data, { merge: true });
       } else {
         data.ekPreis = 0; data.ekDatum = null; data.kosten = 0;
         data.angebotspreis = null; data.verkaufspreis = null; data.vkDatum = null;
+        data.standtageManual = null;
         data.notizen = "";
         data.nr = await nextVehicleNr();
         data.createdAt = serverTimestamp();
         data.createdBy = auth.currentUser.email;
-        await setDoc(doc(collection(db, "fahrzeuge")), data, { merge: true });
+        await setDoc(targetRef, data, { merge: true });
       }
       closeModal();
     });
