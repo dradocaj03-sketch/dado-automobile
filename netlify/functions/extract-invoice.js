@@ -20,9 +20,11 @@ const MODEL = "claude-sonnet-5";
 const MAX_PDF_BYTES = 8 * 1024 * 1024; // 8 MB
 const RATE_LIMIT_PER_HOUR = 20;
 
-const EXTRACTION_PROMPT = `Das ist eine Rechnung/ein Kaufvertrag für den Ankauf eines gebrauchten Fahrzeugs durch einen Autohändler.
-Extrahiere folgende Felder und antworte AUSSCHLIESSLICH mit einem JSON-Objekt, ohne Erklärtext, ohne Markdown-Codeblock:
+const PROMPT_SUFFIX = "\n\nWenn ein Feld nicht sicher zu erkennen ist, setze es auf null. Erfinde keine Werte. Antworte AUSSCHLIESSLICH mit dem JSON-Objekt, ohne Erklärtext, ohne Markdown-Codeblock.";
 
+function buildPrompt(kategorie) {
+  if (kategorie === "Einkaufsrechnung") {
+    return `Das ist eine Rechnung/ein Kaufvertrag für den Ankauf eines gebrauchten Fahrzeugs durch einen Autohändler. Extrahiere:
 {
   "marke": string oder null,
   "modell": string oder null,
@@ -32,9 +34,25 @@ Extrahiere folgende Felder und antworte AUSSCHLIESSLICH mit einem JSON-Objekt, o
   "ez": string oder null (Erstzulassung im Format JJJJ-MM-TT; falls nur Monat/Jahr bekannt: JJJJ-MM-01),
   "ekPreis": number oder null (Kaufpreis in Euro, ohne Währungssymbol),
   "ekDatum": string oder null (Kauf-/Rechnungsdatum im Format JJJJ-MM-TT)
+}` + PROMPT_SUFFIX;
+  }
+  if (kategorie === "Verkaufsrechnung") {
+    return `Das ist eine Rechnung, mit der ein Autohändler ein gebrauchtes Fahrzeug an einen Kunden verkauft hat. Extrahiere:
+{
+  "verkaufspreis": number oder null (Verkaufspreis in Euro, ohne Währungssymbol),
+  "vkDatum": string oder null (Rechnungs-/Verkaufsdatum im Format JJJJ-MM-TT),
+  "kunde": string oder null (Name des Käufers)
+}` + PROMPT_SUFFIX;
+  }
+  // Rechnung – Transport / Werkstatt / TÜV und alles sonstige: als Ausgabe behandeln.
+  return `Das ist eine Rechnung/ein Beleg (Kategorie: "${kategorie}") für eine Ausgabe im Zusammenhang mit einem Fahrzeug im Autohandel. Extrahiere:
+{
+  "betrag": number oder null (Bruttobetrag in Euro, ohne Währungssymbol),
+  "datum": string oder null (Rechnungsdatum im Format JJJJ-MM-TT),
+  "lieferant": string oder null (Name des Rechnungsstellers),
+  "beschreibung": string oder null (kurze Bezeichnung der Leistung, max. 60 Zeichen)
+}` + PROMPT_SUFFIX;
 }
-
-Wenn ein Feld nicht sicher zu erkennen ist, setze es auf null. Erfinde keine Werte.`;
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -87,7 +105,7 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: "Ungültiger Request-Body." }) };
   }
 
-  const { pdfBase64 } = body;
+  const { pdfBase64, kategorie } = body;
   if (!pdfBase64 || typeof pdfBase64 !== "string") {
     return { statusCode: 400, body: JSON.stringify({ error: "Keine PDF-Daten übermittelt." }) };
   }
@@ -107,7 +125,7 @@ exports.handler = async (event) => {
         role: "user",
         content: [
           { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdfBase64 } },
-          { type: "text", text: EXTRACTION_PROMPT },
+          { type: "text", text: buildPrompt(kategorie) },
         ],
       }],
     });
