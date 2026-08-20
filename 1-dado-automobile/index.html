@@ -129,7 +129,7 @@
         <table>
           <thead><tr>
             <th>Nr.</th><th>Fahrzeug</th><th>Status</th><th>Standtage</th>
-            <th>Profit</th><th>Preis</th><th>EZ</th><th>KM</th><th></th>
+            <th>Preis</th><th>EZ</th><th>KM</th><th></th>
           </tr></thead>
           <tbody id="vehicleTableBody"></tbody>
         </table>
@@ -344,7 +344,6 @@
     empty.classList.toggle("hidden", vehicles.length > 0);
 
     vehicles.forEach((v) => {
-      const p = profit(v);
       const st = standtage(v);
       const preisAnzeige = v.status === "verkauft" ? v.verkaufspreis : v.angebotspreis;
       const tr = document.createElement("tr");
@@ -353,7 +352,6 @@
         <td>${v.marke || ""} ${v.modell || ""}<br><span style="color:var(--text-dim);font-size:0.78rem;">${v.variante || ""}</span></td>
         <td><span class="status-pill status-${v.status}">${statusLabel(v.status)}</span></td>
         <td>${st ?? "-"}</td>
-        <td class="${p >= 0 ? "profit-pos" : "profit-neg"}">${fmtEuro(p)}</td>
         <td>${fmtEuro(preisAnzeige)}</td>
         <td>${fmtDate(v.ez)}</td>
         <td>${(v.km || 0).toLocaleString("de-DE")} km</td>
